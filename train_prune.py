@@ -44,6 +44,8 @@ def main(_):
 
     sfm = SfMLearner()
     sfm.train(FLAGS)
+    sfm.prune_graph()
+    sfm.train(FLAGS)
 
 if __name__ == '__main__':
     tf.app.run()

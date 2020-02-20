@@ -104,3 +104,6 @@ venv.bak/
 .mypy_cache/
 
 .DS_Store
+
+/checkpoint/*
+/2018-10-03-subset/*
