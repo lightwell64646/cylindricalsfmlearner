@@ -12,6 +12,7 @@ RUN pip install --upgrade scipy
 RUN apt-get install ffmpeg -y
 RUN pip install requests
 RUN pip install plyfile
+RUN pip install tensorflow
 
 WORKDIR /
 
