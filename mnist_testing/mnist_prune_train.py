@@ -2,6 +2,8 @@ from mnist_prune import mnist_prune_trainer
 from absl import flags
 from absl import app
 
+import tensorflow as tf
+
 
 flags.DEFINE_string("dataset_dir", "", "Dataset directory")
 flags.DEFINE_string("mask_path", "", "Path to mask image")
@@ -27,12 +29,16 @@ flags.DEFINE_boolean("cylindrical", True, "Sets cylindrical projection")
 FLAGS = flags.FLAGS
 
 def main(argv):
-    net = mnist_prune_trainer()
-    net.train(FLAGS)
-    #net.evaluate(FLAGS)
-    net.prune()
-    net.train(FLAGS)
-    #net.evaluate(FLAGS)
+    tf.debugging.set_log_device_placement(True)
+
+    strategy = tf.distribute.MirroredStrategy()
+    with strategy.scope():
+        net = mnist_prune_trainer()
+        net.train(FLAGS)
+        net.evaluate(FLAGS)
+        net.prune()
+        net.train(FLAGS)
+        net.evaluate(FLAGS)
 
 if __name__ == "__main__":
     app.run(main)

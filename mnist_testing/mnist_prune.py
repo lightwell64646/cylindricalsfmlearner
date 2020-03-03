@@ -11,6 +11,9 @@ class mnist_prune_trainer(object):
         self.metric_alpha = 0.9
         self.grad2 = [tf.zeros([l.units]) for l in self.mnist_net.layers[:-1]]
 
+    def load_mnist_model(self, path):
+        self.mnist_net = tf.keras.models.load_model(path)
+
     def train(self, opt):
         loader = get_mnist_datset(opt.batch_size)
         optimizer = tf.keras.optimizers.Adam(learning_rate=opt.learning_rate)
@@ -81,8 +84,10 @@ class mnist_prune_trainer(object):
         print("test", (rl_sum + al_sum) / test_cycles)
         
 
-    def prune(self):
+    def prune(self, save_path = "./tmp/mnistModelPrune/Prunes"):
         self.mnist_net.prune(self.grad2)
         self.grad2 = [tf.zeros([l.units]) for l in self.mnist_net.layers[:-1]]
+        checkpoint = tf.train.Checkpoint(model=self.mnist_net)
+        checkpoint.save(save_path)
         print("pruned", [g.shape for g in self.grad2])
         
