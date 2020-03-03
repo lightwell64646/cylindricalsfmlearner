@@ -79,7 +79,7 @@ class convolution2d(Layer):
             wrapped_inputs = wrap_pad(x, wrap_padding)
             result = tf.nn.conv2d(wrapped_inputs, self.kernel, self.stride, 'VALID') + self.bias
         else: 
-            raise('Not a valid padding: {}'.format(padding))
+            raise('Not a valid padding: {}'.format(self.padding))
         
         if self.activation != None:
             result = self.activation(result)

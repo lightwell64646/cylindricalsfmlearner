@@ -13,7 +13,7 @@ class mnist_prune_trainer(object):
 
     def train(self, opt):
         loader = get_mnist_datset(opt.batch_size)
-        optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
+        optimizer = tf.keras.optimizers.Adam(learning_rate=opt.learning_rate)
         logWriter = tf.summary.create_file_writer("./tmp/mnistLogs.log")
         checkpoint = tf.train.Checkpoint(optimizer=optimizer, model=self.mnist_net)
         manager = tf.train.CheckpointManager(
@@ -46,12 +46,14 @@ class mnist_prune_trainer(object):
 
                 # maintain records.
                 if (step % opt.summary_freq == 0):
+                    acc = epoch_accuracy.result()
                     tf.summary.experimental.set_step(step)
                     tf.summary.scalar("answer_loss", answer_loss)
                     tf.summary.scalar("regularization_loss", regularization_loss)
                     tf.summary.scalar("loss", loss)
-                    tf.summary.scalar("training accuracy", epoch_accuracy.result())
-                    print("training", answer_loss, loss, epoch_accuracy.result())
+                    tf.summary.scalar("training accuracy", acc)
+                    print("training", answer_loss, loss, acc)
+                    print(labels[:10], tf.nn.softmax(probabilities[:10]))
                     logWriter.flush()
                 if ((step % opt.save_latest_freq) == 0): 
                     manager.save()
