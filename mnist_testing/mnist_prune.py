@@ -51,7 +51,7 @@ class mnist_prune_trainer(object):
                     tf.summary.scalar("regularization_loss", regularization_loss)
                     tf.summary.scalar("loss", loss)
                     tf.summary.scalar("training accuracy", epoch_accuracy.result())
-                    print("training", answer_loss)
+                    print("training", answer_loss, loss, epoch_accuracy.result())
                     logWriter.flush()
                 if ((step % opt.save_latest_freq) == 0): 
                     manager.save()

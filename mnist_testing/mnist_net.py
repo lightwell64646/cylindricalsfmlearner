@@ -1,4 +1,6 @@
 import tensorflow as tf
+import sys
+sys.path.insert(0, "..")
 import tf_cylindrical as cylin
 
 class mnist_net(tf.keras.Model):
