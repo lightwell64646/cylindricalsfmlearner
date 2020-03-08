@@ -141,6 +141,16 @@ class linear(Layer):
         self.last_out = out
         return out
 
+class flatten(Layer):
+    def __init__(self, **kwargs):
+        super(flatten, self).__init__(**kwargs)
+        self.units = 1
+    def build(self, input_shape):
+        self.units = tf.math.reduce_prod(input_shape[1:])
+    def call(self, x):
+        return tf.reshape(x, [-1, self.units])
+    def prune(self, metric, input_mask = None, kill_fraction = 0.1):
+        return tf.tile(input_mask, self.units)
 
 class resnet(Layer):
     def __init__(self, units, layer = conv2d, depth = 2, **kwargs):
