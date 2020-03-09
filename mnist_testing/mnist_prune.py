@@ -2,13 +2,19 @@ import os
 import time
 import tensorflow as tf
 from mnistDataLoader import get_mnist_datset
-from mnist_net import mnist_net
+from mnist_net import mnist_net, get_loss_categorical
 
+'''
+A single GPU version of mnist_prune_trainer_distributed
+
+TODO: do object oriented stuff to reduce duplication
+TODO: This code does not work update with m
+'''
 class mnist_prune_trainer(object):
     def __init__(self, opt):
         self.flags = opt
-        self.optimizer = None
         self.epoch_accuracy = None
+        self.optimizer = tf.keras.optimizers.Adam(learning_rate=opt.learning_rate)
 
         self.mnist_net = mnist_net(opt)
 
@@ -17,20 +23,16 @@ class mnist_prune_trainer(object):
 
     def getPruneMetric(self):
         return self.grad2
+    def setPruneMetric(self, ovefride):
+        self.grad2 = ovefride
 
     def load_mnist_model(self, path):
-        self.mnist_net = tf.keras.models.load_model(path)
-
-    def get_loss(self, probabilities, labels):
-        regularization_loss = tf.reduce_sum(self.mnist_net.losses)
-        answer_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
-                            labels = labels, logits = probabilities))
-        return answer_loss, regularization_loss
+        self.mnist_net = mnist_net(tf.keras.models.load_model(path))
 
     def do_train(self, images, labels):
         with tf.GradientTape(persistent=True) as tape:
             probabilities = self.mnist_net(images)
-            answer_loss, regularization_loss = self.get_loss(probabilities, labels)
+            answer_loss, regularization_loss = get_loss_categorical(self.mnist_net, probabilities, labels, self.flags.batch_size)
             loss = answer_loss + regularization_loss
             self.epoch_accuracy.update_state(labels, probabilities)
             grad1 = tape.gradient(loss, self.mnist_net.last_outs)
@@ -54,7 +56,6 @@ class mnist_prune_trainer(object):
             self.load_mnist_model(opt.init_checkpoint_file)
 
         loader = get_mnist_datset(opt.batch_size)
-        self.optimizer = tf.keras.optimizers.Adam(learning_rate=opt.learning_rate)
         self.epoch_accuracy = tf.keras.metrics.CategoricalAccuracy()
 
 
@@ -89,6 +90,7 @@ class mnist_prune_trainer(object):
                     break
 
     def save_explicit(self, path):
+        os.mkdir(path)
         self.mnist_net.save(path)
 
     def eval(self):
@@ -105,19 +107,21 @@ class mnist_prune_trainer(object):
             al_sum += answer_loss
             rl_sum += regularization_loss
             test_cycles += 1
-        tf.summary.scalar("test accuracy", self.epoch_accuracy.result())
+        acc = self.epoch_accuracy.result()
+        tf.summary.scalar("test accuracy", acc)
         tf.summary.scalar("test answer_loss", al_sum / test_cycles)
         tf.summary.scalar("test regularization_loss", rl_sum / test_cycles)
         tf.summary.scalar("test loss", (rl_sum + al_sum) / test_cycles)
         print("test", (rl_sum + al_sum) / test_cycles)
+    
+        return acc
         
 
     def prune(self, kill_fraction = 0.1, save_path = None):
-        if save_path == None:
-            save_path = self.flags.checkpoint_dir + "prune/"
         self.mnist_net.prune(self.grad2, kill_fraction=kill_fraction)
         self.grad2 = [tf.zeros([l.units]) for l in self.mnist_net.layers[:-1]]
         checkpoint = tf.train.Checkpoint(model=self.mnist_net)
-        checkpoint.save(save_path)
+        if save_path != None:
+            checkpoint.save(save_path)
         print("pruned", [g.shape for g in self.grad2])
         

@@ -1,0 +1,18 @@
+Prune Cycle Begining
+Accuracy,ParameterCount
+tf.Tensor(0.101925366, shape=(), dtype=float32),tf.Tensor(4258510, shape=(), dtype=int32)
+tf.Tensor(0.15095276, shape=(), dtype=float32),tf.Tensor(3827560, shape=(), dtype=int32)
+tf.Tensor(0.24841207, shape=(), dtype=float32),tf.Tensor(3425205, shape=(), dtype=int32)
+tf.Tensor(0.1197896, shape=(), dtype=float32),tf.Tensor(2704630, shape=(), dtype=int32)
+tf.Tensor(0.11343787, shape=(), dtype=float32),tf.Tensor(1518480, shape=(), dtype=int32)
+finished training cycle best performance tf.Tensor(0.24841207, shape=(), dtype=float32) achieved when 0.1 of weights pruned
+tf.Tensor(0.14976181, shape=(), dtype=float32),tf.Tensor(3074032, shape=(), dtype=int32)
+tf.Tensor(0.09825327, shape=(), dtype=float32),tf.Tensor(2764184, shape=(), dtype=int32)
+tf.Tensor(0.15045653, shape=(), dtype=float32),tf.Tensor(2189370, shape=(), dtype=int32)
+tf.Tensor(0.09775705, shape=(), dtype=float32),tf.Tensor(1228935, shape=(), dtype=int32)
+finished training cycle best performance tf.Tensor(0.15045653, shape=(), dtype=float32) achieved when 0.2 of weights pruned
+tf.Tensor(0.11065899, shape=(), dtype=float32),tf.Tensor(1975251, shape=(), dtype=int32)
+tf.Tensor(0.29237792, shape=(), dtype=float32),tf.Tensor(1772148, shape=(), dtype=int32)
+tf.Tensor(0.26210797, shape=(), dtype=float32),tf.Tensor(1398990, shape=(), dtype=int32)
+tf.Tensor(0.197499, shape=(), dtype=float32),tf.Tensor(784866, shape=(), dtype=int32)
+finished training cycle best performance tf.Tensor(0.29237792, shape=(), dtype=float32) achieved when 0.1 of weights pruned

@@ -7,10 +7,13 @@ from absl import app
 import tensorflow as tf
 
 # get command line inputs
-flags.DEFINE_string("cultivation_report_path", "./", "the path to write the report on pruning success")
+flags.DEFINE_string("cultivation_report_path", "./cultivationReport.csv", "the path to write the report on pruning success")
 flags.DEFINE_string("dataset_dir", "", "Dataset directory")
 flags.DEFINE_string("mask_path", "", "Path to mask image")
-flags.DEFINE_string("checkpoint_dir", "./checkpoints/", "Directory name to save the checkpoints")
+
+# So apparently keras can't handle path lengths of more than 170 characters in windows so ... yha. User be ware.
+flags.DEFINE_string("checkpoint_dir", "./ckpts", "Directory name to save the checkpoints")
+flags.DEFINE_integer("max_checkpoints_to_keep", 3, "the number of checkpoints to store before deleting")
 flags.DEFINE_string("init_checkpoint_file", None, "Specific checkpoint file to initialize from")
 flags.DEFINE_float("learning_rate", 0.002, "Learning rate of for adam")
 flags.DEFINE_float("l2_weight_reg", 0.05, "Learning rate of for adam")
@@ -27,8 +30,8 @@ flags.DEFINE_boolean("cylindrical", True, "Sets cylindrical projection")
 FLAGS = flags.FLAGS
 
 def main(argv):
-    #I want to do distributed training so this is set for debug
-    tf.debugging.set_log_device_placement(True)
+    #If I want to do distributed training so this is set for debug
+    #tf.debugging.set_log_device_placement(True)
 
     cultivate_model(mnist_prune_trainer_distributed, FLAGS)
 

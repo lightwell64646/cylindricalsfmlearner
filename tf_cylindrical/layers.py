@@ -31,6 +31,7 @@ class convolution2d(Layer):
         self.last_out = None
 
     def build(self, input_shape):
+        super(convolution2d, self).build(input_shape)
         self.kernel = self.add_weight(name = "kernel",
                                       shape = self.kernel_size + [input_shape[-1], self.units],
                                       initializer = 'random_normal', 
@@ -40,6 +41,29 @@ class convolution2d(Layer):
                                     shape = [self.units],
                                     initializer = 'random_normal',
                                     trainable = True)
+
+        print("built", [w.shape for w in self.get_weights()])
+
+    def call(self, x):
+        # maintain original behavior
+        if self.padding=='SAME' or self.padding=='VALID':
+            result = tf.nn.conv2d(x, self.kernel, self.stride, self.padding) + self.bias
+
+        # W=(W−F+2P)/S+1
+        elif self.padding=='CYLIN':
+            size = x.get_shape()
+            height = size[1]
+            width = size[2]
+            wrap_padding = [k-1 for k in self.kernel_size]
+            wrapped_inputs = wrap_pad(x, wrap_padding)
+            result = tf.nn.conv2d(wrapped_inputs, self.kernel, self.stride, 'VALID') + self.bias
+        else: 
+            raise('Not a valid padding: {}'.format(self.padding))
+        
+        if self.activation != None:
+            result = self.activation(result)
+        self.last_out = result
+        return result
 
     def prune(self, metric, input_mask = None, kill_fraction = 0.1):
         if (input_mask is not None): 
@@ -65,28 +89,6 @@ class convolution2d(Layer):
             return output_mask
         return None
 
-    def call(self, x):
-        # maintain original behavior
-        if self.padding=='SAME' or self.padding=='VALID':
-            result = tf.nn.conv2d(x, self.kernel, self.stride, self.padding) + self.bias
-
-        # W=(W−F+2P)/S+1
-        elif self.padding=='CYLIN':
-            size = x.get_shape()
-            height = size[1]
-            width = size[2]
-            wrap_padding = [k-1 for k in self.kernel_size]
-            wrapped_inputs = wrap_pad(x, wrap_padding)
-            result = tf.nn.conv2d(wrapped_inputs, self.kernel, self.stride, 'VALID') + self.bias
-        else: 
-            raise('Not a valid padding: {}'.format(self.padding))
-        
-        if self.activation != None:
-            result = self.activation(result)
-        self.last_out = result
-        return result
-
-
 
 # Aliases
 conv2d = convolution2d
@@ -101,6 +103,7 @@ class linear(Layer):
         self.last_out = None
 
     def build(self, input_shape):
+        super(linear, self).build(input_shape)
         self.w = self.add_weight(name = "weight", 
                                  shape = (input_shape[-1], self.units),
                                  initializer = 'random_normal',
@@ -110,13 +113,19 @@ class linear(Layer):
                                     initializer = 'random_normal',
                                     trainable = True)
 
+    def call(self, x):
+        out = x @ self.w + self.bias
+        if self.activation != None:
+            out = self.activation(out)
+        self.last_out = out
+        return out
     def prune(self, metric, input_mask = None, kill_fraction = 0.1):
         if (input_mask is not None): 
             pruned_w = tf.gather(self.w, input_mask, axis = 0)
             self.w = self.add_weight(name = "weight", shape = pruned_w.shape,
-                                     initializer = tf.constant_initializer(pruned_w.numpy()),
-                                     regularizer=tf.keras.regularizers.l2(self.L2Regularization),
-                                     trainable = True)
+                                        initializer = tf.constant_initializer(pruned_w.numpy()),
+                                        regularizer=tf.keras.regularizers.l2(self.L2Regularization),
+                                        trainable = True)
         if metric is not None:
             decision_point = np.sort(metric)[int(metric.shape[0]*kill_fraction)]
             output_mask = [i for i, m in enumerate(metric) if m > decision_point]
@@ -124,33 +133,38 @@ class linear(Layer):
             pruned_w = tf.gather(self.w, output_mask, axis = 1)
             pruned_bias = tf.gather(self.bias, output_mask)
             self.w = self.add_weight(name = "weight", shape = pruned_w.shape,
-                                     initializer = tf.constant_initializer(pruned_w.numpy()),
-                                     regularizer=tf.keras.regularizers.l2(self.L2Regularization),
-                                     trainable = True)
+                                        initializer = tf.constant_initializer(pruned_w.numpy()),
+                                        regularizer=tf.keras.regularizers.l2(self.L2Regularization),
+                                        trainable = True)
             self.bias = self.add_weight(name = "b", shape = pruned_bias.shape,
-                                     initializer = tf.constant_initializer(pruned_bias.numpy()),
-                                     trainable = True)
+                                        initializer = tf.constant_initializer(pruned_bias.numpy()),
+                                        trainable = True)
             self.units = len(output_mask)
+            print("prune linear output_mask", output_mask.shape, metric.shape, input_mask.shape)
             return output_mask
         return None
 
-    def call(self, x):
-        out = x @ self.w + self.bias
-        if self.activation != None:
-            out = self.activation(out)
-        self.last_out = out
-        return out
-
+'''
+tiles the pruning metrics to ensure clean transition
+'''
 class flatten(Layer):
     def __init__(self, **kwargs):
         super(flatten, self).__init__(**kwargs)
+        self.mirrored_inputs = 1
         self.units = 1
     def build(self, input_shape):
-        self.units = tf.math.reduce_prod(input_shape[1:])
+        super(flatten, self).build(input_shape)
+        self.mirrored_inputs = tf.math.reduce_prod(input_shape[1:-1])
+        self.units = tf.reduce_sum(input_shape[-1])
     def call(self, x):
-        return tf.reshape(x, [-1, self.units])
-    def prune(self, metric, input_mask = None, kill_fraction = 0.1):
-        return tf.tile(input_mask, self.units)
+        return tf.reshape(x, [-1, self.mirrored_inputs*self.units])
+
+    def prune(self, empty, input_mask = None, kill_fraction = 0.1):
+        self.units = tf.reduce_sum(input_mask.shape)
+        print("flatten shortened to ", input_mask.shape)
+        res = [input_mask + i*self.units for i in range(self.mirrored_inputs)]
+        res = tf.concat(res,0)
+        return res
 
 class resnet(Layer):
     def __init__(self, units, layer = conv2d, depth = 2, **kwargs):
@@ -193,77 +207,3 @@ class step_stop(Layer):
             l.prune(None, input_mask)
         self.layers[-1].prune(metric, None)
         return output_mask'''
-
-# -*- coding: utf-8 -*-
-
-"""Convolutional layers for cylindrical data.
-
-@@convolution2d
-@@conv2d
-"""
-'''
-import tensorflow as tf
-
-from tf_cylindrical.pad import wrap, wrap_pad
-
-
-class convolution2d:
-    def __init__(num_outputs, kernel_size, stride=1, padding='CYLIN', **kwargs):
-        # kernel size 1D -> 2D
-        if isinstance(kernel_size, int):
-            kernel_size = [kernel_size, kernel_size]
-        self.kernel_size = kernel_size
-        self.padding = padding
-        self.num_outputs = num_outputs
-        self.kwargs = **kwargs
-        self.layer = tf.keras.layers.Conv2D(num_outputs,
-                            kernel_size,
-                            stride,
-                            'VALID' if (padding == 'CYLIN') else padding,
-                            **kwargs)
-
-        print(padding)
-        raise('Not a valid padding: {}'.format(padding))
-
-    def prune(self, metric, input_mask = None, kill_fraction = 0.1):
-        decision_point = np.sort(metric)[int(metric.shape[0]*kill_fraction)]
-        output_mask = [i for m, i in enumerate(metric) if m > decision_point]
-        if (input_mask != None): 
-            kernel = tf.gather(self.layer.weights[0], input_mask, axis = 2)
-        pruned_kernel = tf.gather(kernel, output_mask, axis = 3)
-        pruned_bias = tf.gather(self.layer.weights[1], output_mask, axis = -1)
-        if input_mask == None:
-            input_size = [self.layers.weights[0].shape[2]]
-        else:
-            input_size = [len(input_mask)]
-
-        self.layer = tf.keras.layers.Conv2D(metric.shape[0] - int(metric.shape[0]*kill_fraction)),
-                            kernel_size,
-                            stride,
-                            self.padding,
-                            self.kwargs)
-        self.layer(tf.ones([1] + self.kernel_size + input_size))
-        self.layer.set_weights([pruned_kernel, pruned_bias])
-
-
-    def __call__(self, x):
-        # maintain original behavior
-        if self.padding=='SAME' or self.padding=='VALID':
-            return self.layer(inputs)
-
-        # W=(W−F+2P)/S+1
-        elif self.padding=='CYLIN':
-            size = inputs.get_shape()
-            height = size[1]
-            width = size[2]
-            wrap_padding = [k-1 for k in kernel_size]
-            wrapped_inputs = wrap_pad(inputs, wrap_padding)
-            return self.layer(wrapped_inputs)
-
-
-
-# Aliases
-conv2d = convolution2d
-
-self.layer.weights[0]
-'''
