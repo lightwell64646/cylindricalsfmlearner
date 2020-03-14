@@ -140,7 +140,7 @@ class linear(Layer):
                                         initializer = tf.constant_initializer(pruned_bias.numpy()),
                                         trainable = True)
             self.units = len(output_mask)
-            print("prune linear output_mask", output_mask.shape, metric.shape, input_mask.shape)
+            #print("prune linear output_mask", output_mask.shape, metric.shape, input_mask.shape)
             return output_mask
         return None
 

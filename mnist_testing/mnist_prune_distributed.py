@@ -49,10 +49,13 @@ class mnist_prune_trainer_distributed(object):
     # sorry this is messy distributed training has funky syntax
     # first we define a tf.function that will handle every train step
     # then we run through data in a loop running that train step
-    def train(self):
+    def train(self, max_steps = None):
         opt = self.flags
         if opt.init_checkpoint_file != None:
             self.load_mnist_model(opt.init_checkpoint_file)
+
+        if max_steps == None:
+            max_steps = opt.max_steps
 
         @tf.function
         def function_wrapped_training(images, labels):
@@ -69,7 +72,10 @@ class mnist_prune_trainer_distributed(object):
                 self.optimizer.apply_gradients(list(zip(grads, self.mnist_net.trainable_weights)))
 
                 # get second derivative for pruning
-                g2 = tape.gradient(grad1, self.mnist_net.last_outs)
+                g2 = []
+                for g in tape.gradient(grad1, self.mnist_net.last_outs):
+                    collapse_dims = tf.range(len(g.shape._dims) - 1)
+                    g2.append(tf.reduce_mean(tf.abs(g), collapse_dims))
                 # Ensure that derivatives are the right shape
                 # print(self.grad2[0].shape,self.grad2[-1].shape)
 
@@ -107,7 +113,6 @@ class mnist_prune_trainer_distributed(object):
                     
                     answer_loss, regularization_loss, g2 = function_wrapped_training(images, labels)
                     for i in range(len(g2)):
-                        g2[i] = tf.reduce_mean(g2[i],[i for i in range(len(g2[i].shape) - 1)])
                         if (self.first):
                             self.grad2[i] = g2[i]
                         else:
@@ -132,7 +137,7 @@ class mnist_prune_trainer_distributed(object):
                     if ((step % opt.save_latest_freq) == 0):
                         checkpointManager.save()
                     step += 1
-                    if (step >= opt.max_steps):
+                    if (step >= max_steps):
                         break
 
 
@@ -142,7 +147,7 @@ class mnist_prune_trainer_distributed(object):
         print([[w.shape for w in l.get_weights()] for l in self.mnist_net.layers])
         self.checkpoint.save(path)
 
-    def eval(self):
+    def eval(self, eval_steps = None):
         @tf.function
         #start train step declaration
         def function_wrapped_testing(images, labels):
@@ -182,13 +187,15 @@ class mnist_prune_trainer_distributed(object):
             al_sum += answer_loss
             rl_sum += regularization_loss
             test_cycles += 1
+            if (eval_steps != None and eval_steps <= test_cycles):
+                break
         acc = self.epoch_accuracy.result()
         self.epoch_accuracy.reset_states()
         tf.summary.scalar("test accuracy", acc)
         tf.summary.scalar("test answer_loss", al_sum / test_cycles)
         tf.summary.scalar("test regularization_loss", rl_sum / test_cycles)
         tf.summary.scalar("test loss", (rl_sum + al_sum) / test_cycles)
-        print("test", (rl_sum + al_sum) / test_cycles)
+        print("test", (rl_sum + al_sum) / test_cycles, acc)
     
         return acc
         
