@@ -1,7 +1,10 @@
 import tensorflow as tf
 import sys
+from utils import get_loss_categorical, parameter_count
+
 sys.path.insert(0, "..")
 import tf_cylindrical as cylin
+
 
 '''
 A Keras model that predicts on MNIST
@@ -36,7 +39,8 @@ class mnist_net(tf.keras.Model):
         self.prunable_layers = [self.c1, self.c2, self.proc, self.l1]
 
     def call(self, x):
-        y = tf.keras.layers.MaxPool2D()(self.c1(x))
+        y = self.c1(x)
+        y = tf.keras.layers.MaxPool2D()(y)
         y = self.c2(y)
         y = self.proc(y)
         y = self.proc(y)
@@ -55,17 +59,6 @@ class mnist_net(tf.keras.Model):
             last_mask = dl.prune(met, last_mask, kill_fraction)
         self.layers[-1].prune(None, last_mask, kill_fraction)
 
-
-def get_loss_categorical(net, probabilities, labels, global_batch_size):
-    regularization_loss = tf.nn.scale_regularization_loss(net.losses)
-    answer_loss = tf.nn.compute_average_loss(
-                    tf.nn.softmax_cross_entropy_with_logits(
-                        labels = labels, logits = probabilities), 
-                    global_batch_size)
-    return answer_loss, regularization_loss
-
-def parameter_count(net):
-    return tf.reduce_sum([tf.reduce_prod(tf.shape(v)) for v in net.variables])
 
 class mnist_net_strong_initialization(tf.keras.Model):
     def __init__(self, opt):
