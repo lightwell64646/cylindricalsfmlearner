@@ -1,18 +1,23 @@
 Prune Cycle Begining
-Accuracy,ParameterCount
-tf.Tensor(0.101925366, shape=(), dtype=float32),tf.Tensor(4258510, shape=(), dtype=int32)
-tf.Tensor(0.15095276, shape=(), dtype=float32),tf.Tensor(3827560, shape=(), dtype=int32)
-tf.Tensor(0.24841207, shape=(), dtype=float32),tf.Tensor(3425205, shape=(), dtype=int32)
-tf.Tensor(0.1197896, shape=(), dtype=float32),tf.Tensor(2704630, shape=(), dtype=int32)
-tf.Tensor(0.11343787, shape=(), dtype=float32),tf.Tensor(1518480, shape=(), dtype=int32)
-finished training cycle best performance tf.Tensor(0.24841207, shape=(), dtype=float32) achieved when 0.1 of weights pruned
-tf.Tensor(0.14976181, shape=(), dtype=float32),tf.Tensor(3074032, shape=(), dtype=int32)
-tf.Tensor(0.09825327, shape=(), dtype=float32),tf.Tensor(2764184, shape=(), dtype=int32)
-tf.Tensor(0.15045653, shape=(), dtype=float32),tf.Tensor(2189370, shape=(), dtype=int32)
-tf.Tensor(0.09775705, shape=(), dtype=float32),tf.Tensor(1228935, shape=(), dtype=int32)
-finished training cycle best performance tf.Tensor(0.15045653, shape=(), dtype=float32) achieved when 0.2 of weights pruned
-tf.Tensor(0.11065899, shape=(), dtype=float32),tf.Tensor(1975251, shape=(), dtype=int32)
-tf.Tensor(0.29237792, shape=(), dtype=float32),tf.Tensor(1772148, shape=(), dtype=int32)
-tf.Tensor(0.26210797, shape=(), dtype=float32),tf.Tensor(1398990, shape=(), dtype=int32)
-tf.Tensor(0.197499, shape=(), dtype=float32),tf.Tensor(784866, shape=(), dtype=int32)
-finished training cycle best performance tf.Tensor(0.29237792, shape=(), dtype=float32) achieved when 0.1 of weights pruned
+Accuracy,ParameterCount,Time
+0.5964015126228333,4258510,16.94958734512329
+running prune at level 0.1
+0.13750000298023224,3425205,4.511811017990112
+0.26249998807907104,3425205,7.0029661655426025
+running prune at level 0.2
+0.09687499701976776,2704630,4.1213719844818115
+0.30937498807907104,2704630,6.241055488586426
+running prune at level 0.4
+0.26249998807907104,1518480,3.2852981090545654
+0.3687500059604645,1518480,4.8892128467559814
+finished training cycle best performance -60.37044906616211 achieved when 40.0% of weights pruned
+running prune at level 0.1
+0.12343750149011612,1228935,2.748526096343994
+0.24531249701976776,1228935,4.138560056686401
+running prune at level 0.2
+0.10468749701976776,969990,2.465064287185669
+0.234375,969990,3.739579439163208
+running prune at level 0.4
+0.17656250298023224,543900,2.2478344440460205
+0.12812499701976776,543900,3.3411777019500732
+finished training cycle best performance -21.62787628173828 achieved when 40.0% of weights pruned

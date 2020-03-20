@@ -107,3 +107,6 @@ venv.bak/
 
 /checkpoint/*
 /2018-10-03-subset/*
+mnist_testing/checkpoints/*
+mnist_testing/ckpts/*
+mnist_testing/tmp/*
