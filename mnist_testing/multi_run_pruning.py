@@ -46,7 +46,7 @@ def cultivate_model(training_harness, net_class, dataset, loss_function, Flags, 
                 results_file.write(str(float(net_perf)) + "," + str(int(param_count)) + "," + str(time() - start_time) +"\n")
                 print("intermediate evaluation: ", net_perf)
                 
-            adjusted_perf = net_perf * Flags.target_parameter_count/param_count*Flags.parameter_value_weighting
+            adjusted_perf = net_perf - (int(param_count)/Flags.target_parameter_count)*Flags.parameter_value_weighting
 
             if best_save_path == None or adjusted_perf > best_perf:
                 best_save_path = save_path

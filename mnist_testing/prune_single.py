@@ -9,8 +9,9 @@ TODO: do object oriented stuff to reduce duplication
 TODO: This code does not work? Testing
 '''
 class prune_trainer(object):
-    def __init__(self, opt, net_generator, dataset_generator, loss_function):
+    def __init__(self, opt, net_generator, dataset_generator, loss_function, do_accuracy = True):
         self.flags = opt
+        self.do_accuracy = do_accuracy
         self.epoch_accuracy = tf.keras.metrics.CategoricalAccuracy()
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=opt.learning_rate)
 
@@ -45,7 +46,8 @@ class prune_trainer(object):
                 self.loss_function(predictions, labels), self.flags.batch_size)
             regularization_loss = tf.nn.scale_regularization_loss(self.net.losses)
             loss = answer_loss + regularization_loss
-            self.epoch_accuracy(labels, predictions)
+            if self.do_accuracy:
+                self.epoch_accuracy(labels, predictions)
             grad1 = tape.gradient(loss, self.net.last_outs)
         
         # train on loss
@@ -66,7 +68,6 @@ class prune_trainer(object):
         opt = self.flags
         if opt.init_checkpoint_file != None:
             self.load_model(opt.init_checkpoint_file)
-        self.epoch_accuracy = tf.keras.metrics.CategoricalAccuracy()
 
 
         checkpointManager = tf.train.CheckpointManager(self.checkpoint, opt.checkpoint_dir, opt.max_checkpoints_to_keep)
@@ -90,16 +91,21 @@ class prune_trainer(object):
 
                 # maintain records.
                 if (step % opt.summary_freq == 0):
-                    acc = self.epoch_accuracy.result() 
-                    self.epoch_accuracy.reset_states()
                     total_loss = answer_loss + regularization_loss
 
                     tf.summary.experimental.set_step(step)
                     tf.summary.scalar("answer_loss", tf.cast(answer_loss, tf.int64))
                     tf.summary.scalar("regularization_loss", regularization_loss)
                     tf.summary.scalar("loss", total_loss)
-                    tf.summary.scalar("training accuracy", acc)
-                    print("training", answer_loss, total_loss, acc)
+
+                    if self.do_accuracy:
+                        acc = self.epoch_accuracy.result() 
+                        self.epoch_accuracy.reset_states()
+                        tf.summary.scalar("training accuracy", acc)
+                        print("training", answer_loss, total_loss, acc)
+                    else:
+                        print("training", answer_loss, total_loss)
+
                     logWriter.flush()
                 if ((step % opt.save_latest_freq) == 0):
                     checkpointManager.save()
@@ -119,7 +125,8 @@ class prune_trainer(object):
             answer_loss = tf.nn.compute_average_loss(
                 self.loss_function(predictions, labels), self.flags.batch_size)
             regularization_loss = tf.nn.scale_regularization_loss(self.net.losses)
-            self.epoch_accuracy(labels, predictions)
+            if self.do_accuracy:
+                self.epoch_accuracy(labels, predictions)
 
             return answer_loss, regularization_loss
 
@@ -133,15 +140,19 @@ class prune_trainer(object):
             test_cycles += 1
             if (eval_steps != None and eval_steps <= test_cycles):
                 break
-        acc = self.epoch_accuracy.result()
-        self.epoch_accuracy.reset_states()
-        tf.summary.scalar("test accuracy", acc)
-        tf.summary.scalar("test answer_loss", al_sum / test_cycles)
+
+            
+        average_anser_loss = al_sum / test_cycles
+        tf.summary.scalar("test answer_loss", average_anser_loss)
         tf.summary.scalar("test regularization_loss", rl_sum / test_cycles)
-        tf.summary.scalar("test loss", (rl_sum + al_sum) / test_cycles)
-        print("test", (rl_sum + al_sum) / test_cycles, acc)
-    
-        return acc
+        if self.do_accuracy:
+            acc = self.epoch_accuracy.result()
+            self.epoch_accuracy.reset_states()
+            tf.summary.scalar("test accuracy", acc)
+            print("test", (rl_sum + al_sum) / test_cycles, acc)
+            return acc
+        
+        return average_anser_loss
         
 
     def prune(self, kill_fraction = 0.1, save_path = None):

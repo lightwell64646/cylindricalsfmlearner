@@ -27,10 +27,10 @@ flags.DEFINE_integer("num_scales", 4, "Number of scales in multi-scale loss")
 flags.DEFINE_integer("num_source", 2, "Number of source images")
 
 # 1 so ignore effectively by default
-flags.DEFINE_integer("target_parameter_count", 1, "number of parameters in desired model")
+flags.DEFINE_integer("target_parameter_count", 10000, "number of parameters in desired model")
 flags.DEFINE_integer("max_prune_cycles", 5, "maximum number of prune cycles to run if target_parameter_count can not be met")
 flags.DEFINE_integer("eval_steps", None, "number of batches to use for evaluation. (None means all in training set)")
-flags.DEFINE_float("parameter_value_weighting", 0.4, "larger values favor smaller models when choosing which pruned model to propagate to next cycle")
+flags.DEFINE_float("parameter_value_weighting", 0.002, "larger values favor smaller models when choosing which pruned model to propagate to next cycle. units are ((% acc)/(target_parameter_count parameters))")
 flags.DEFINE_integer("prune_recovery_steps", 1000, "maximum number of training iterations to recover function after pruning network")
 flags.DEFINE_integer("prune_recovery_log_count", 3, "number of prune recovery evaluations to perform durring recovery")
 flags.DEFINE_integer("initial_training_steps", 10000, "Maximum number of training iterations")
