@@ -10,7 +10,7 @@ def read_and_preprocess_mnist(features, labels):
     return features, labels
 
 # set the batch dimension to a constant size. This makes TPUs happy.
-def _set_shapes(batch_size, features, labels):
+def _set_shapes(batch_size, features, labels, transpose_input = False, extra_dims = 0):
     """Statically set the batch_size dimension."""
     """needed to make batch_size read as a fixed value to make TPUs happy"""
     

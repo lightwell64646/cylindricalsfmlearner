@@ -42,7 +42,7 @@ flags.DEFINE_boolean("cylindrical", True, "Sets cylindrical projection")
 FLAGS = flags.FLAGS
 
 def main(argv):
-    #If I want to do distributed training so this is set for debug
+    #If I want to do distributed training set this for debug
     #tf.debugging.set_log_device_placement(True)
 
     cultivate_model(prune_trainer, mnist_net, get_mnist_datset, get_loss_categorical, FLAGS)

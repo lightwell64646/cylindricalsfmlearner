@@ -36,7 +36,7 @@ class mnist_net(tf.keras.Model):
         self.l2 = cylin.linear(10, name = "l2", L2Regularization=opt.l2_weight_reg)
 
         self.last_outs = None
-        self.prunable_layers = [self.c1, self.c2, self.proc, self.l1]
+        self.saliency_tracked_layers = [self.c1, self.c2, self.proc, self.l1]
 
     def call(self, x):
         y = self.c1(x)
@@ -48,15 +48,18 @@ class mnist_net(tf.keras.Model):
         y = self.flatten(y)
         y = self.l1(y)
         y = self.l2(y)
-        self.last_outs = [p.last_out for p in self.prunable_layers]
+        self.last_outs = [p.last_out for p in self.saliency_tracked_layers]
         return y
 
-    def prune(self, metrics, kill_fraction = 0.1):
-        assert(len(metrics) == len(self.prunable_layers))
+    def prune(self, metrics, kill_fraction = 0.1, kill_low = True):
+        assert(len(metrics) == len(self.saliency_tracked_layers))
         last_mask = None
-        metrics.insert(self.num_convolutional_layers, None) #for flatten
-        for dl, met in zip(self.layers[:-1], metrics):
-            last_mask = dl.prune(met, last_mask, kill_fraction)
+        i = 0
+        for dl, met in zip(self.saliency_tracked_layers, metrics):
+            last_mask = dl.prune(met, last_mask, kill_fraction, kill_low)
+            i += 1
+            if i == self.num_convolutional_layers:
+                last_mask = self.flatten.prune(None, last_mask, kill_fraction)
         self.layers[-1].prune(None, last_mask, kill_fraction)
 
 
