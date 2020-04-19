@@ -96,7 +96,7 @@ class convolution2d(Layer):
 
 class convolution2dTranspose(Layer):
     def __init__(self, units, kernel_size, stride=1, padding='CYLIN', L2Regularization = 0.05, activation = None, **kwargs):
-        super(convolution2d, self).__init__(**kwargs)
+        super(convolution2dTranspose, self).__init__(**kwargs)
         # kernel size 1D -> 2D
         if isinstance(kernel_size, int):
             kernel_size = [kernel_size, kernel_size]
@@ -123,9 +123,9 @@ class convolution2dTranspose(Layer):
                                     initializer = 'random_normal',
                                     trainable = True)
                                     
-        if (padding == "SAME"):
+        if (self.padding == "SAME"):
             self.out_shape = [input_shape[0], input_shape[1] * self.stride, input_shape[2] * self.stride, input_shape[3]]
-        elif (padding == "CYLIN" or padding == "VALID"):
+        elif (self.padding == "CYLIN" or self.padding == "VALID"):
             self.out_shape = [input_shape[0], (input_shape[1] - 1) * self.stride + self.kernel_size[0],
             (input_shape[2] - 1) * self.stride + self.kernel_size[1], input_shape[3]]
 

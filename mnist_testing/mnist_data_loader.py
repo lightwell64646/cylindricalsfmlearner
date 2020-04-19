@@ -28,7 +28,8 @@ def _set_shapes(batch_size, features, labels, transpose_input = False, extra_dim
         _set_shape(labels)
     return features, labels
 
-def get_mnist_datset(batch_size, is_training = True):
+def get_mnist_datset(flags, is_training = True):
+    batch_size = flags.batch_size
     (x_train, y_train), (x_test, y_test) = mnist.load_data()
 
     if is_training:

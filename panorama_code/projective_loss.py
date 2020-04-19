@@ -1,13 +1,14 @@
 import sys
 sys.path.insert(0, "..")
 
-from utils import projective_inverse_warp
+from SFMLutils import projective_inverse_warp
 
 import tensorflow as tf
 
 def disparity_loss(pred, src_tgt_stack, opt):
     depths, poses = pred
     src = src_tgt_stack[:-1]
+    depths = [1/d for d in depths]
     target_im = src_tgt_stack[-1]
     total_disparity = 0
     for s in range(opt.num_scales):
@@ -16,7 +17,7 @@ def disparity_loss(pred, src_tgt_stack, opt):
                 src[:,:,:,3*i:3*(i+1)],
                 tf.squeeze(depths[s], axis=3),
                 poses[:,i,:],
-                opt.intrinsics[:,s,:,:],
+                opt.intrinsics[s,:,:],
                 do_wrap=opt.do_wrap,
                 is_cylin=opt.cylindrical)
 

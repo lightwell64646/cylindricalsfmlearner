@@ -14,8 +14,9 @@ def resize_like(x, like):
     return tf.image.resize(x, like_shape)
 
 class depth_ego_net_compatible(tf.keras.Model):
-    def __init__(self):
+    def __init__(self, opt):
         super(depth_ego_net_compatible, self).__init__()
+        self.flags = opt
         depth_net_name = "depth_net/"
         self.c1_d = cylin.conv2d(32, [7, 7], stride=2, padding='CYLIN', name = depth_net_name + "cnv1")
         self.c1b_d = cylin.conv2d(32, [7, 7], stride=1, padding='CYLIN', name = depth_net_name + "cnv1b")
@@ -66,7 +67,7 @@ class depth_ego_net_compatible(tf.keras.Model):
         self.c5_p = cylin.conv2d(256,[3,3], stride=2, padding = "CYLIN", name = pose_net_name + "cnv5")
         self.c6_p = cylin.conv2d(256,[3,3], stride=2, padding = "CYLIN", name = pose_net_name + "pose/cnv6")
         self.c7_p = cylin.conv2d(256,[3,3], stride=2, padding = "CYLIN", name = pose_net_name + "pose/cnv7")
-        self.pred_p = cylin.conv2d(6*num_sources,[1,1], stride=1, padding = "CYLIN", name = pose_net_name + "pose/pred")
+        self.pred_p = cylin.conv2d(6*opt.num_source,[1,1], stride=1, padding = "CYLIN", name = pose_net_name + "pose/pred")
 
         self.last_outs = None
         self.saliency_tracked_layers = self.layers

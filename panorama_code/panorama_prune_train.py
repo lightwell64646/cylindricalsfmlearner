@@ -1,9 +1,14 @@
+import sys
+sys.path.insert(0,'../prune_framework')
+
 from prune_distributed import prune_trainer_distributed
 from prune_single import prune_trainer
 from multi_run_pruning import cultivate_model
+
 from compatible_depth_nets import depth_ego_net_compatible
 from panoramaDataLoader import get_panorama_datset
-from utils import get_loss_categorical
+from projective_loss import disparity_loss
+from parse_intrinsics import parse_intrinsics
 
 from absl import flags
 from absl import app
@@ -11,8 +16,8 @@ from absl import app
 import tensorflow as tf
 
 # get command line inputs
-flags.DEFINE_string("cultivation_report_path", "./cultivationReport.csv", "the path to write the report on pruning success")
-flags.DEFINE_string("dataset_dir", "", "Dataset directory")
+flags.DEFINE_string("cultivation_report_path", "reports/cultivationReport.csv", "the path to write the report on pruning success")
+flags.DEFINE_string("dataset_dir", "../2018-10-03-subset", "Dataset directory")
 
 # So apparently keras can't handle path lengths of more than 170 characters in windows so ... yha. User be ware.
 flags.DEFINE_string("checkpoint_dir", "./ckpts/", "Directory name to save the checkpoints")
@@ -27,7 +32,8 @@ flags.DEFINE_integer("batch_size", 64, "The size of of a sample batch")
 flags.DEFINE_integer("num_scales", 4, "Number of scales in multi-scale loss")
 flags.DEFINE_integer("num_source", 2, "Number of source images")
 
-flags.DEFINE_string("intrinsics_file", None, "path to file containing intrinsics for camera")
+flags.DEFINE_string("intrinsics_file", "../data/headcam/intrinsics.txt", "path to file containing intrinsics for camera")
+flags.DEFINE_string("intrinsics", None, "data holder for use internally")
 
 flags.DEFINE_integer("target_parameter_count", 10000, "number of parameters in desired model")
 flags.DEFINE_integer("max_prune_cycles", 5, "maximum number of prune cycles to run if target_parameter_count can not be met")
@@ -46,8 +52,8 @@ FLAGS = flags.FLAGS
 def main(argv):
     #If I want to do distributed training this is set for debug
     #tf.debugging.set_log_device_placement(True)
-
-    cultivate_model(prune_trainer, depth_ego_net_compatible, get_panorama_datset, get_loss_categorical, FLAGS)
+    FLAGS.intrinsics = parse_intrinsics(FLAGS.intrinsics_file, FLAGS.num_source)
+    cultivate_model(prune_trainer, depth_ego_net_compatible, get_panorama_datset, disparity_loss, FLAGS)
  
 if __name__ == "__main__":
     app.run(main)

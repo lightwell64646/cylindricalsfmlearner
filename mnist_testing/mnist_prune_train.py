@@ -1,3 +1,6 @@
+import sys
+sys.path.insert(0,'../prune_framework')
+
 from prune_distributed import prune_trainer_distributed
 from prune_single import prune_trainer
 from multi_run_pruning import cultivate_model
@@ -11,7 +14,7 @@ from absl import app
 import tensorflow as tf
 
 # get command line inputs
-flags.DEFINE_string("cultivation_report_path", "./cultivationReport.csv", "the path to write the report on pruning success")
+flags.DEFINE_string("cultivation_report_path", "./reports/cultivationReport.csv", "the path to write the report on pruning success")
 flags.DEFINE_string("dataset_dir", "", "Dataset directory")
 flags.DEFINE_string("mask_path", "", "Path to mask image")
 
