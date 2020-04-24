@@ -1,5 +1,5 @@
 import sys
-include os
+import os
 sys.path.insert(0,os.path.abspath(__file__) + '../prune_framework')
 
 from prune_distributed import prune_trainer_distributed
