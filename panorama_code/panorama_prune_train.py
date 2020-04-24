@@ -1,6 +1,6 @@
 import sys
 import os
-sys.path.insert(0,os.path.split(os.path.abspath("panorama_prune_train.py"))[0] + '../prune_framework')
+sys.path.insert(0,os.path.split(os.path.abspath(__file__))[0] + '/../prune_framework')
 
 from prune_distributed import prune_trainer_distributed
 from prune_single import prune_trainer

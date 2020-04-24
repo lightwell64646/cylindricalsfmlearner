@@ -2,7 +2,8 @@ import tensorflow as tf
 import numpy as np
 
 import sys
-sys.path.insert(0,"..")
+import os
+sys.path.insert(0,os.path.split(os.path.abspath(__file__))[0] + '/..')
 import tf_cylindrical as cylin
 
 
