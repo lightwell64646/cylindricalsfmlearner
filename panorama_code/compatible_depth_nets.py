@@ -34,19 +34,19 @@ class depth_ego_net_compatible(tf.keras.Model):
         self.c7_d = cylin.conv2d(512, [3, 3], stride=2, padding='CYLIN', name = depth_net_name + "cnv7")
         self.c7b_d = cylin.conv2d(512, [3, 3], stride=1, padding='CYLIN', name = depth_net_name + "cnv7b")
         
-        self.uc7_d = cylin.conv2dTranspose(512, [3,3], stride = 2, name = depth_net_name + "upcnv7")
+        self.uc7_d = cylin.conv2dTranspose(512, [3,3], batch_size = opt.batch_size, stride = 2, name = depth_net_name + "upcnv7")
         self.ic7_d = cylin.conv2d(512, [3, 3], stride=1, padding='CYLIN', name = depth_net_name + "icnv7")
-        self.uc6_d = cylin.conv2dTranspose(512, [3,3], stride = 2, name = depth_net_name + "upcnv6")
+        self.uc6_d = cylin.conv2dTranspose(512, [3,3], batch_size = opt.batch_size, stride = 2, name = depth_net_name + "upcnv6")
         self.ic6_d = cylin.conv2d(512, [3, 3], stride=1, padding='CYLIN', name = depth_net_name + "icnv6")
-        self.uc5_d = cylin.conv2dTranspose(256, [3,3], stride = 2, name = depth_net_name + "upcnv5")
+        self.uc5_d = cylin.conv2dTranspose(256, [3,3], batch_size = opt.batch_size, stride = 2, name = depth_net_name + "upcnv5")
         self.ic5_d = cylin.conv2d(256, [3, 3], stride=1, padding='CYLIN', name = depth_net_name + "icnv5")
-        self.uc4_d = cylin.conv2dTranspose(128, [3,3], stride = 2, name = depth_net_name + "upcnv4")
+        self.uc4_d = cylin.conv2dTranspose(128, [3,3], batch_size = opt.batch_size, stride = 2, name = depth_net_name + "upcnv4")
         self.ic4_d = cylin.conv2d(128, [3, 3], stride=1, padding='CYLIN', name = depth_net_name + "icnv4")
-        self.uc3_d = cylin.conv2dTranspose(64, [3,3], stride = 2, name = depth_net_name + "upcnv3")
+        self.uc3_d = cylin.conv2dTranspose(64, [3,3], batch_size = opt.batch_size, stride = 2, name = depth_net_name + "upcnv3")
         self.ic3_d = cylin.conv2d(64, [3, 3], stride=1, padding='CYLIN', name = depth_net_name + "icnv3")
-        self.uc2_d = cylin.conv2dTranspose(32, [3,3], stride = 2, name = depth_net_name + "upcnv2")
+        self.uc2_d = cylin.conv2dTranspose(32, [3,3], batch_size = opt.batch_size, stride = 2, name = depth_net_name + "upcnv2")
         self.ic2_d = cylin.conv2d(32, [3, 3], stride=1, padding='CYLIN', name = depth_net_name + "icnv2")
-        self.uc1_d = cylin.conv2dTranspose(16, [3,3], stride = 2, name = depth_net_name + "upcnv1")
+        self.uc1_d = cylin.conv2dTranspose(16, [3,3], batch_size = opt.batch_size, stride = 2, name = depth_net_name + "upcnv1")
         self.ic1_d = cylin.conv2d(16, [3, 3], stride=1, padding='CYLIN', name = depth_net_name + "icnv1")
 
         self.d4_d = cylin.conv2d(1, [3,3], stride = 1, padding = "CYLIN", L2Regularization = 0, 
@@ -115,17 +115,17 @@ class depth_ego_net_compatible(tf.keras.Model):
         y = tf.concat([y, y3b], axis = 3)
         y = self.ic4_d(y)
         disp4 = DISP_SCALING * self.d4_d(y) + MIN_DISP
-        disp4_up = tf.image.resize_bilinear(disp4, [np.int(H/4), np.int(W/4)])
+        disp4_up = tf.image.resize(disp4, [np.int(H/4), np.int(W/4)])
         y = self.uc3_d(y)
         y = tf.concat([y, y2b, disp4_up], axis = 3)
         y = self.ic3_d(y)
         disp3 = DISP_SCALING * self.d3_d(y) + MIN_DISP
-        disp3_up = tf.image.resize_bilinear(disp3, [np.int(H/2), np.int(W/2)])
+        disp3_up = tf.image.resize(disp3, [np.int(H/2), np.int(W/2)])
         y = self.uc2_d(y)
         y = tf.concat([y, y1b, disp3_up], axis = 3)
         y = self.ic2_d(y)
         disp2 = DISP_SCALING * self.d2_d(y) + MIN_DISP
-        disp2_up = tf.image.resize_bilinear(disp2, [H, W])
+        disp2_up = tf.image.resize(disp2, [H, W])
         y = self.uc1_d(y)
         y = tf.concat([y, disp2_up], axis = 3)
         y = self.ic1_d(y)
@@ -136,7 +136,7 @@ class depth_ego_net_compatible(tf.keras.Model):
         return [disp1, disp2, disp3, disp4]
 
     def getPoseFromTo(self, fromImages, toImage):
-        x = tf.concat(fromImages, toImage, axis = 3)
+        x = tf.concat([fromImages, toImage], axis = 3)
 
         c1 = self.c1_p(x)
         c2 = self.c2_p(c1)
@@ -159,8 +159,8 @@ class depth_ego_net_compatible(tf.keras.Model):
         depths = []
         poses = []
         for i in range(0,x_shape[1]-1):
-            depth = self.getDepth(x[i])
-            pose = self.getPoseFromTo(x[i],x[-1])
+            depth = self.getDepth(x[:,i])
+            pose = self.getPoseFromTo(x[:,i],x[:,-1])
             depths.append(depth)
             poses.append(pose)
         return depths, poses
