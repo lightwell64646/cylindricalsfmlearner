@@ -5,8 +5,8 @@ import os
 TODO: I don't understand the data format being read these constants are probably wrong
 '''
 
-IMG_HEIGHT = 1280
-IMG_WIDTH = 2560
+IMG_HEIGHT = 1280/2
+IMG_WIDTH = 2560/2
 NUM_SOURCE = 3
 SOURCE_SPACING = 1
 
@@ -22,8 +22,10 @@ def get_file_list(data_root, split):
 
 def read_and_preprocess_panorama(image_stack):
     print(image_stack)
-    src_tgt_seq = [tf.image.decode_image(
+    src_tgt_seq = [tf.image.resize_image(
+                    tf.image.decode_image(
                     tf.io.read_file(image_stack[i]))
+                    [IMG_HEIGHT, IMG_WIDTH])
                 for i in range(NUM_SOURCE)]
     src_tgt_seq = tf.cast(tf.stack(src_tgt_seq, axis = 0), tf.float32)
     return src_tgt_seq, src_tgt_seq
