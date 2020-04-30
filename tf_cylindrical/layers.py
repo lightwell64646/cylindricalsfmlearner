@@ -95,7 +95,7 @@ class convolution2d(Layer):
         return None
 
 class convolution2dTranspose(Layer):
-    def __init__(self, units, kernel_size, stride=1, padding='CYLIN', L2Regularization = 0.05, activation = None, **kwargs):
+    def __init__(self, units, kernel_size, batch_size, stride=1, padding='SAME', L2Regularization = 0.05, activation = None, **kwargs):
         super(convolution2dTranspose, self).__init__(**kwargs)
         # kernel size 1D -> 2D
         if isinstance(kernel_size, int):
@@ -106,15 +106,15 @@ class convolution2dTranspose(Layer):
         self.L2Regularization = L2Regularization
         self.activation = activation
         self.padding = padding
-        
-        self.last_out = None
+        self.batch_size = batch_size        
 
+        self.last_out = None
         self.out_shape = None
 
     def build(self, input_shape):
-        super(convolution2d, self).build(input_shape)
+        super(convolution2dTranspose, self).build(input_shape)
         self.kernel = self.add_weight(name = "kernel",
-                                      shape = self.kernel_size + [input_shape[-1], self.units],
+                                      shape = self.kernel_size + [self.units, input_shape[-1]],
                                       initializer = 'random_normal', 
                                       regularizer=tf.keras.regularizers.l2(self.L2Regularization),
                                       trainable = True)
@@ -124,30 +124,29 @@ class convolution2dTranspose(Layer):
                                     trainable = True)
                                     
         if (self.padding == "SAME"):
-            self.out_shape = [input_shape[0], input_shape[1] * self.stride, input_shape[2] * self.stride, input_shape[3]]
-        elif (self.padding == "CYLIN" or self.padding == "VALID"):
-            self.out_shape = [input_shape[0], (input_shape[1] - 1) * self.stride + self.kernel_size[0],
-            (input_shape[2] - 1) * self.stride + self.kernel_size[1], input_shape[3]]
-
+            self.out_shape = [self.batch_size, 
+                  input_shape[1] * self.stride, 
+                  input_shape[2] * self.stride, 
+                  self.units]
+        elif (self.padding == "VALID"):
+            self.out_shape = [self.batch_size, 
+                  (input_shape[1]) * self.stride - self.stride + self.kernel_size[0],
+                  (input_shape[2]) * self.stride - self.stride + self.kernel_size[1], 
+                  self.units]
+        print(self.out_shape, self.padding)
+        self.out_shape = tf.constant(self.out_shape, tf.int32)
     def clone_prune_state(self, other):
         self.units = other.units
 
     def call(self, x):
+        print(x.shape, "x shape")
         # maintain original behavior
         if self.padding=='SAME' or self.padding=='VALID':
             result = tf.nn.conv2d_transpose(x, self.kernel, self.out_shape, self.stride, self.padding) + self.bias
 
-        # W=(W−F+2P)/S+1
-        elif self.padding=='CYLIN':
-            size = x.get_shape()
-            height = size[1]
-            width = size[2]
-            wrap_padding = [k-1 for k in self.kernel_size]
-            wrapped_inputs = wrap_pad(x, wrap_padding)
-            result = tf.nn.conv2d_transpose(wrapped_inputs, self.kernel, self.out_shape, self.stride, 'VALID') + self.bias
         else: 
             raise('Not a valid padding: {}'.format(self.padding))
-        
+	        
         if self.activation != None:
             result = self.activation(result)
         self.last_out = result
