@@ -22,7 +22,7 @@ def get_file_list(data_root, split):
 
 def read_and_preprocess_panorama(image_stack):
     print(image_stack)
-    src_tgt_seq = [tf.image.resize_image(
+    src_tgt_seq = [tf.image.resize(
                     tf.image.decode_image(
                     tf.io.read_file(image_stack[i]))
                     [IMG_HEIGHT, IMG_WIDTH])
