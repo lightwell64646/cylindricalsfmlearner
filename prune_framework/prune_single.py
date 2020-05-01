@@ -49,7 +49,7 @@ class prune_trainer(object):
         with tf.GradientTape(persistent=True) as tape:
             predictions = self.net(images)
             answer_loss = tf.nn.compute_average_loss(
-                self.loss_function(predictions, labels), self.flags.batch_size)
+                self.loss_function(predictions, labels, self.flags), self.flags.batch_size)
             regularization_loss = tf.nn.scale_regularization_loss(self.net.losses)
             loss = answer_loss + regularization_loss
             if self.do_accuracy:

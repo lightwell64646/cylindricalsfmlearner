@@ -29,7 +29,7 @@ flags.DEFINE_float("learning_rate", 0.0005, "Learning rate of for adam")
 flags.DEFINE_float("l2_weight_reg", 0.05, "Learning rate of for adam")
 flags.DEFINE_float("smooth_weight", 0.2, "Weight for smoothness")
 
-flags.DEFINE_integer("batch_size", 4, "The size of of a sample batch")
+flags.DEFINE_integer("batch_size", 2, "The size of of a sample batch")
 flags.DEFINE_integer("num_scales", 4, "Number of scales in multi-scale loss")
 flags.DEFINE_integer("num_source", 2, "Number of source images")
 
