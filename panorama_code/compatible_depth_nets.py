@@ -138,11 +138,11 @@ class depth_ego_net_compatible(tf.keras.Model):
 
         c1 = self.c1_p(x)
         c2 = self.c2_p(c1)
-        c3 = self.c2_p(c2)
-        c4 = self.c2_p(c3)
-        c5 = self.c2_p(c4)
-        c6 = self.c2_p(c5)
-        c7 = self.c2_p(c6)
+        c3 = self.c3_p(c2)
+        c4 = self.c4_p(c3)
+        c5 = self.c5_p(c4)
+        c6 = self.c6_p(c5)
+        c7 = self.c7_p(c6)
         pred = self.pred_p(c7)
         pred = tf.reduce_mean(pred, [1,2])
         pose_f = 0.01 * tf.reshape(pred, [-1,self.num_sources, 6])
@@ -168,7 +168,7 @@ class depth_ego_net_compatible(tf.keras.Model):
         for l in self.saliency_tracked_layers:
             if (l.last_out is None):
                 print(l, l.name)
-                
+
         return depths, poses
 
     def prune(self, metrics, kill_fraction = 0.1):
