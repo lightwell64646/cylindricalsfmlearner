@@ -131,11 +131,6 @@ class depth_ego_net_compatible(tf.keras.Model):
         y = self.ic1_d(y)
         disp1 = DISP_SCALING * self.d1_d(y) + MIN_DISP
         
-
-        self.last_outs = [p.last_out for p in self.saliency_tracked_layers]
-        for l in self.saliency_tracked_layers:
-            if (l.last_out is None):
-                print(l, l.name)
         return [disp1, disp2, disp3, disp4]
 
     def getPoseFromTo(self, fromImage, toImage):
@@ -169,6 +164,11 @@ class depth_ego_net_compatible(tf.keras.Model):
                         for i in range(x_shape[1]-1)], axis = -1)
         poses = self.getPoseFromTo(source_images_cated, x[:,-1])
 
+        self.last_outs = [p.last_out for p in self.saliency_tracked_layers]
+        for l in self.saliency_tracked_layers:
+            if (l.last_out is None):
+                print(l, l.name)
+                
         return depths, poses
 
     def prune(self, metrics, kill_fraction = 0.1):
