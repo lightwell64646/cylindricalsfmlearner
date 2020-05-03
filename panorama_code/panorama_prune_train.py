@@ -34,7 +34,6 @@ flags.DEFINE_integer("num_scales", 4, "Number of scales in multi-scale loss")
 flags.DEFINE_integer("num_source", 2, "Number of source images")
 
 flags.DEFINE_string("intrinsics_file", "../data/headcam/intrinsics.txt", "path to file containing intrinsics for camera")
-flags.DEFINE_string("intrinsics", None, "data holder for use internally")
 
 flags.DEFINE_integer("target_parameter_count", 10000, "number of parameters in desired model")
 flags.DEFINE_integer("max_prune_cycles", 5, "maximum number of prune cycles to run if target_parameter_count can not be met")
@@ -48,13 +47,22 @@ flags.DEFINE_integer("save_latest_freq", 5000, \
     "Save the latest model every save_latest_freq iterations (overwrites the previous latest model)")
 flags.DEFINE_boolean("do_wrap", True, "Enables horizontal wrapping")
 flags.DEFINE_boolean("cylindrical", True, "Sets cylindrical projection")
+
+#do not set manually. Yes its jank just don't
+flags.DEFINE_boolean("intrinsics", True, "data holder for use internally")
+flags.DEFINE_boolean("do_accuracy", False, "whether or not to use accuracy as a metric. Meaningless for self supervised approaches")
+
 FLAGS = flags.FLAGS
 
 def main(argv):
     #If I want to do distributed training this is set for debug
     #tf.debugging.set_log_device_placement(True)
-    FLAGS.intrinsics = parse_intrinsics(FLAGS.intrinsics_file, FLAGS.num_source)
-    cultivate_model(prune_trainer, depth_ego_net_compatible, get_panorama_datset, disparity_loss, FLAGS)
+    intrinsics = parse_intrinsics(FLAGS.intrinsics_file, FLAGS.num_scales)
+    print(intrinsics.shape)
+    multi_intrinsics = tf.stack([intrinsics for _ in range(FLAGS.batch_size)], axis = 0)
+    FLAGS.intrinsics = multi_intrinsics
+    cultivate_model(prune_trainer, depth_ego_net_compatible, get_panorama_datset, 
+            disparity_loss, FLAGS)
  
 if __name__ == "__main__":
     app.run(main)

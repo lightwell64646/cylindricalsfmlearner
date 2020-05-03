@@ -8,6 +8,7 @@ TODO: I don't understand the data format being read these constants are probably
 IMG_HEIGHT = 1280
 IMG_WIDTH = 2560
 NUM_SOURCE = 3
+NUM_CHANNELS = 3
 SOURCE_SPACING = 1
 
 # el-capitan has images in //data/jventu09/headcam/2018-10-03

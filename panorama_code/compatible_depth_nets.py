@@ -133,10 +133,13 @@ class depth_ego_net_compatible(tf.keras.Model):
         
 
         self.last_outs = [p.last_out for p in self.saliency_tracked_layers]
+        for l in self.saliency_tracked_layers:
+            if (l.last_out is None):
+                print(l, l.name)
         return [disp1, disp2, disp3, disp4]
 
-    def getPoseFromTo(self, fromImages, toImage):
-        x = tf.concat([fromImages, toImage], axis = 3)
+    def getPoseFromTo(self, fromImage, toImage):
+        x = tf.concat([fromImage, toImage], axis = -1)
 
         c1 = self.c1_p(x)
         c2 = self.c2_p(c1)
@@ -152,17 +155,20 @@ class depth_ego_net_compatible(tf.keras.Model):
  
  
     '''
-        x - [batch, sequence, width, height, rgb]
+        input: x - [batch, sequence, width, height, rgb]
+        output: depths - list[sequence, scale] 
+                            of [batch, width, height, depth]
+                poses - [batch, src, pose]
     '''
     def call(self, x):
         x_shape = x.shape
-        depths = []
-        poses = []
-        for i in range(0,x_shape[1]-1):
-            depth = self.getDepth(x[:,i])
-            pose = self.getPoseFromTo(x[:,i],x[:,-1])
-            depths.append(depth)
-            poses.append(pose)
+        depths = [self.getDepth(x[:,i]) for i in range(x_shape[1])]
+
+        #If you think this is awkward I agree
+        source_images_cated = tf.concat([x[:,i] 
+                        for i in range(x_shape[1]-1)], axis = -1)
+        poses = self.getPoseFromTo(source_images_cated, x[:,-1])
+
         return depths, poses
 
     def prune(self, metrics, kill_fraction = 0.1):

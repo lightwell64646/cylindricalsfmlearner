@@ -42,6 +42,9 @@ flags.DEFINE_integer("save_latest_freq", 5000, \
     "Save the latest model every save_latest_freq iterations (overwrites the previous latest model)")
 flags.DEFINE_boolean("do_wrap", True, "Enables horizontal wrapping")
 flags.DEFINE_boolean("cylindrical", True, "Sets cylindrical projection")
+
+#Don't touch this.
+flags.DEFINE_boolean("do_accuracy", True, "whether or not to use accuracy as a metric.")
 FLAGS = flags.FLAGS
 
 def main(argv):

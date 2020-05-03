@@ -110,7 +110,7 @@ def pixel2cam(depth, pixel_coords, intrinsics, is_homogeneous=True, is_cylin=Tru
 
   if is_cylin:
       # pixel_coords is [x,y,1]
-      cylinder_coords = tf.matmul(tf.matrix_inverse(intrinsics), pixel_coords)
+      cylinder_coords = tf.matmul(tf.linalg.inv(intrinsics), pixel_coords)
       # cylinder_coords is [theta,Z,1]
       X = tf.sin(cylinder_coords[:,0:1,:])
       Y = cylinder_coords[:,1:2,:]
@@ -118,7 +118,7 @@ def pixel2cam(depth, pixel_coords, intrinsics, is_homogeneous=True, is_cylin=Tru
       # cam_coords is [X,Y,Z] * depth
       cam_coords = tf.concat([X,Y,Z],axis=1) * depth
   else:
-      cam_coords = tf.matmul(tf.matrix_inverse(intrinsics), pixel_coords) * depth
+      cam_coords = tf.matmul(tf.linalg.inv(intrinsics), pixel_coords) * depth
 
   if is_homogeneous:
     ones = tf.ones([batch, 1, height*width])

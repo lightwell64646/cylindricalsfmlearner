@@ -10,9 +10,9 @@ TODO: do object oriented stuff to reduce duplication
 TODO: This code does not work? Testing
 '''
 class prune_trainer(object):
-    def __init__(self, opt, net_generator, dataset_generator, loss_function, do_accuracy = True):
+    def __init__(self, opt, net_generator, dataset_generator, loss_function):
         self.flags = opt
-        self.do_accuracy = do_accuracy
+        self.do_accuracy = self.flags.do_accuracy
         self.epoch_accuracy = tf.keras.metrics.CategoricalAccuracy()
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=opt.learning_rate)
 
