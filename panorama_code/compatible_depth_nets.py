@@ -148,9 +148,11 @@ class compatible_pose_net(tf.keras.Model):
     Returns:
         The gradients w.r.t. the input.
     '''
+
 @tf.RegisterGradient("ResizeBilinearGrad")
 def _resize_bilinear_grad(op, grad):
-  return grad
+    return (tf.image.resize(grad, op.inputs[0].shape[1:3]), 
+        tf.image.resize(grad, op.inputs[1].shape[1:3]))
 
 class depth_ego_net_compatible(tf.keras.Model):
     def __init__(self, opt):

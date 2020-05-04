@@ -11,6 +11,7 @@ def evaluate_saliency(training_harness, net_class, dataset, loss_function, Flags
         plt.subplot(len(metrics), 1, i+1)
         plt.hist(m.numpy())
     plt.show(block = False)
+    plt.savefig("saliency histogram")
 
     print(float(net.eval(Flags.eval_steps)))
 
