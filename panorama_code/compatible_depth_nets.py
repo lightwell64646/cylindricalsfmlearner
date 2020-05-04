@@ -14,10 +14,9 @@ def resize_like(x, like):
     like_shape = like.shape[1:3]
     return tf.image.resize(x, like_shape)
 
-class depth_ego_net_compatible(tf.keras.Model):
+class compatible_depth_net(tf.keras.Model):
     def __init__(self, opt):
-        super(depth_ego_net_compatible, self).__init__()
-        self.flags = opt
+        super(compatible_depth_net, self).__init__()
         depth_net_name = "depth_net/"
         self.c1_d = cylin.conv2d(32, [7, 7], stride=2, padding='CYLIN', name = depth_net_name + "cnv1")
         self.c1b_d = cylin.conv2d(32, [7, 7], stride=1, padding='CYLIN', name = depth_net_name + "cnv1b")
@@ -34,19 +33,19 @@ class depth_ego_net_compatible(tf.keras.Model):
         self.c7_d = cylin.conv2d(512, [3, 3], stride=2, padding='CYLIN', name = depth_net_name + "cnv7")
         self.c7b_d = cylin.conv2d(512, [3, 3], stride=1, padding='CYLIN', name = depth_net_name + "cnv7b")
         
-        self.uc7_d = cylin.conv2dTranspose(512, [3,3], batch_size = opt.batch_size, stride = 2, name = depth_net_name + "upcnv7")
+        self.uc7_d = cylin.conv2dTranspose(512, [3,3], batch_size = opt.batch_size*(opt.num_source+1), stride = 2, name = depth_net_name + "upcnv7")
         self.ic7_d = cylin.conv2d(512, [3, 3], stride=1, padding='CYLIN', name = depth_net_name + "icnv7")
-        self.uc6_d = cylin.conv2dTranspose(512, [3,3], batch_size = opt.batch_size, stride = 2, name = depth_net_name + "upcnv6")
+        self.uc6_d = cylin.conv2dTranspose(512, [3,3], batch_size = opt.batch_size*(opt.num_source+1), stride = 2, name = depth_net_name + "upcnv6")
         self.ic6_d = cylin.conv2d(512, [3, 3], stride=1, padding='CYLIN', name = depth_net_name + "icnv6")
-        self.uc5_d = cylin.conv2dTranspose(256, [3,3], batch_size = opt.batch_size, stride = 2, name = depth_net_name + "upcnv5")
+        self.uc5_d = cylin.conv2dTranspose(256, [3,3], batch_size = opt.batch_size*(opt.num_source+1), stride = 2, name = depth_net_name + "upcnv5")
         self.ic5_d = cylin.conv2d(256, [3, 3], stride=1, padding='CYLIN', name = depth_net_name + "icnv5")
-        self.uc4_d = cylin.conv2dTranspose(128, [3,3], batch_size = opt.batch_size, stride = 2, name = depth_net_name + "upcnv4")
+        self.uc4_d = cylin.conv2dTranspose(128, [3,3], batch_size = opt.batch_size*(opt.num_source+1), stride = 2, name = depth_net_name + "upcnv4")
         self.ic4_d = cylin.conv2d(128, [3, 3], stride=1, padding='CYLIN', name = depth_net_name + "icnv4")
-        self.uc3_d = cylin.conv2dTranspose(64, [3,3], batch_size = opt.batch_size, stride = 2, name = depth_net_name + "upcnv3")
+        self.uc3_d = cylin.conv2dTranspose(64, [3,3], batch_size = opt.batch_size*(opt.num_source+1), stride = 2, name = depth_net_name + "upcnv3")
         self.ic3_d = cylin.conv2d(64, [3, 3], stride=1, padding='CYLIN', name = depth_net_name + "icnv3")
-        self.uc2_d = cylin.conv2dTranspose(32, [3,3], batch_size = opt.batch_size, stride = 2, name = depth_net_name + "upcnv2")
+        self.uc2_d = cylin.conv2dTranspose(32, [3,3], batch_size = opt.batch_size*(opt.num_source+1), stride = 2, name = depth_net_name + "upcnv2")
         self.ic2_d = cylin.conv2d(32, [3, 3], stride=1, padding='CYLIN', name = depth_net_name + "icnv2")
-        self.uc1_d = cylin.conv2dTranspose(16, [3,3], batch_size = opt.batch_size, stride = 2, name = depth_net_name + "upcnv1")
+        self.uc1_d = cylin.conv2dTranspose(16, [3,3], batch_size = opt.batch_size*(opt.num_source+1), stride = 2, name = depth_net_name + "upcnv1")
         self.ic1_d = cylin.conv2d(16, [3, 3], stride=1, padding='CYLIN', name = depth_net_name + "icnv1")
 
         self.d4_d = cylin.conv2d(1, [3,3], stride = 1, padding = "CYLIN", L2Regularization = 0, 
@@ -57,29 +56,7 @@ class depth_ego_net_compatible(tf.keras.Model):
                 activation = tf.sigmoid, name = depth_net_name + "disp2")
         self.d1_d = cylin.conv2d(1, [3,3], stride = 1, padding = "CYLIN", L2Regularization = 0, 
                 activation = tf.sigmoid, name = depth_net_name + "disp1")
-
-
-        pose_net_name = "pose_exp_net"
-        self.num_sources = 2
-        self.c1_p = cylin.conv2d(16,[7,7], stride=2, padding = "CYLIN", name = pose_net_name + "cnv1")
-        self.c2_p = cylin.conv2d(32,[3,5], stride=2, padding = "CYLIN", name = pose_net_name + "cnv2")
-        self.c3_p = cylin.conv2d(64,[3,3], stride=2, padding = "CYLIN", name = pose_net_name + "cnv3")
-        self.c4_p = cylin.conv2d(128,[3,3], stride=2, padding = "CYLIN", name = pose_net_name + "cnv4")
-        self.c5_p = cylin.conv2d(256,[3,3], stride=2, padding = "CYLIN", name = pose_net_name + "cnv5")
-        self.c6_p = cylin.conv2d(256,[3,3], stride=2, padding = "CYLIN", name = pose_net_name + "pose/cnv6")
-        self.c7_p = cylin.conv2d(256,[3,3], stride=2, padding = "CYLIN", name = pose_net_name + "pose/cnv7")
-        self.pred_p = cylin.conv2d(6*opt.num_source,[1,1], stride=1, padding = "CYLIN", name = pose_net_name + "pose/pred")
-
-        self.last_outs = None
-        self.saliency_tracked_layers = self.layers
-        '''[self.c1_d, self.c1b_d, self.c2_d, self.c2b_d, self.c3_d, self.c3b_d, 
-            self.c4_d, self.c4b_d, self.c5_d, self.c5b_d, self.c6_d, self.c6b_d, self.c7_d, self.c7b_d,
-            self.uc]'''
-
-    def parameter_count(self):
-        return tf.reduce_sum([tf.reduce_prod(tf.shape(v)) for v in self.variables])
-
-    def getDepth(self, x):
+    def call(self, x):
         H = x.shape[1]
         W = x.shape[2]
 
@@ -133,7 +110,22 @@ class depth_ego_net_compatible(tf.keras.Model):
         
         return [disp1, disp2, disp3, disp4]
 
-    def getPoseFromTo(self, fromImage, toImage):
+
+
+class compatible_pose_net(tf.keras.Model):
+    def __init__(self, opt):
+        super(compatible_pose_net, self).__init__()
+        pose_net_name = "pose_exp_net"
+        self.num_sources = 2
+        self.c1_p = cylin.conv2d(16,[7,7], stride=2, padding = "CYLIN", name = pose_net_name + "cnv1")
+        self.c2_p = cylin.conv2d(32,[3,5], stride=2, padding = "CYLIN", name = pose_net_name + "cnv2")
+        self.c3_p = cylin.conv2d(64,[3,3], stride=2, padding = "CYLIN", name = pose_net_name + "cnv3")
+        self.c4_p = cylin.conv2d(128,[3,3], stride=2, padding = "CYLIN", name = pose_net_name + "cnv4")
+        self.c5_p = cylin.conv2d(256,[3,3], stride=2, padding = "CYLIN", name = pose_net_name + "cnv5")
+        self.c6_p = cylin.conv2d(256,[3,3], stride=2, padding = "CYLIN", name = pose_net_name + "pose/cnv6")
+        self.c7_p = cylin.conv2d(256,[3,3], stride=2, padding = "CYLIN", name = pose_net_name + "pose/cnv7")
+        self.pred_p = cylin.conv2d(6*opt.num_source,[1,1], stride=1, padding = "CYLIN", name = pose_net_name + "pose/pred")
+    def call(self, fromImage, toImage):
         x = tf.concat([fromImage, toImage], axis = -1)
 
         c1 = self.c1_p(x)
@@ -147,29 +139,58 @@ class depth_ego_net_compatible(tf.keras.Model):
         pred = tf.reduce_mean(pred, [1,2])
         pose_f = 0.01 * tf.reshape(pred, [-1,self.num_sources, 6])
         return pose_f
+
+    '''
+    Args:
+        op: The ResizeBilinear op.
+        grad: The tensor representing the gradient w.r.t. the output.
+    
+    Returns:
+        The gradients w.r.t. the input.
+    '''
+@tf.RegisterGradient("ResizeBilinearGrad")
+def _resize_bilinear_grad(op, grad):
+  return grad
+
+class depth_ego_net_compatible(tf.keras.Model):
+    def __init__(self, opt):
+        super(depth_ego_net_compatible, self).__init__()
+        self.flags = opt
+        self.depth_net = compatible_depth_net(opt)
+        self.pose_net = compatible_pose_net(opt)
+
+        self.last_outs = None
+        self.saliency_tracked_layers = self.depth_net.layers + self.pose_net.layers
+
+    def parameter_count(self):
+        return tf.reduce_sum([tf.reduce_prod(tf.shape(v)) for v in self.variables])
+
+    def getDepth(self, x):
+        return self.depth_net(x)
+
+    def getPoseFromTo(self, fromImage, toImage):
+        return self.pose_net(fromImage, toImage)
  
  
     '''
         input: x - [batch, sequence, width, height, rgb]
-        output: depths - list[sequence, scale] 
-                            of [batch, width, height, depth]
+        output: depths - list[scale] 
+                            of [batch, sequence, width, height]
                 poses - [batch, src, pose]
     '''
     def call(self, x):
         x_shape = x.shape
-        depths = [self.getDepth(x[:,i]) for i in range(x_shape[1])]
-
-        #If you think this is awkward I agree
+        depths = self.getDepth(tf.reshape(x, [x_shape[0]*x_shape[1], x_shape[2], x_shape[3], x_shape[4]]))
+        depths_shaped = []
+        for d in depths:
+            d_shape = d.shape
+            depths_shaped.append(tf.reshape(d, [x_shape[0], x_shape[1],d_shape[1], d_shape[2], d_shape[3]]))
         source_images_cated = tf.concat([x[:,i] 
                         for i in range(x_shape[1]-1)], axis = -1)
         poses = self.getPoseFromTo(source_images_cated, x[:,-1])
 
         self.last_outs = [p.last_out for p in self.saliency_tracked_layers]
-        for l in self.saliency_tracked_layers:
-            if (l.last_out is None):
-                print(l, l.name)
-
-        return depths, poses
+        return depths_shaped, poses
 
     def prune(self, metrics, kill_fraction = 0.1):
         assert(len(metrics) == len(self.saliency_tracked_layers))

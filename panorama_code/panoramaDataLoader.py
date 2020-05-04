@@ -7,6 +7,7 @@ TODO: I don't understand the data format being read these constants are probably
 
 IMG_HEIGHT = 1280
 IMG_WIDTH = 2560
+IMG_SCALE = [1/4,1/4]
 NUM_SOURCE = 3
 NUM_CHANNELS = 3
 SOURCE_SPACING = 1
@@ -27,7 +28,7 @@ def read_and_preprocess_panorama(image_stack):
                     tf.io.read_file(image_stack[i]))
                 for i in range(NUM_SOURCE)]
     [im.set_shape([IMG_WIDTH, IMG_HEIGHT, NUM_CHANNELS]) for im in src_tgt_seq]
-    cutSize = tf.constant([int(IMG_WIDTH/2),int(IMG_HEIGHT/2)], tf.int32)
+    cutSize = tf.constant([int(IMG_WIDTH*IMG_SCALE[0]),int(IMG_HEIGHT*IMG_SCALE[1])], tf.int32)
     src_tgt_seq = [tf.image.resize(im, cutSize) for im in src_tgt_seq]
     src_tgt_seq = tf.cast(
             tf.stack(src_tgt_seq, axis = 0), tf.float32)
