@@ -33,7 +33,6 @@ flags.DEFINE_integer("num_source", 2, "Number of source images")
 
 # 1 so ignore effectively by default
 flags.DEFINE_integer("target_parameter_count", 10000, "number of parameters in desired model")
-flags.DEFINE_integer("max_prune_cycles", 5, "maximum number of prune cycles to run if target_parameter_count can not be met")
 flags.DEFINE_integer("eval_steps", None, "number of batches to use for evaluation. (None means all in training set)")
 flags.DEFINE_float("parameter_value_weighting", 0.002, "larger values favor smaller models when choosing which pruned model to propagate to next cycle. units are ((% acc)/(target_parameter_count parameters))")
 flags.DEFINE_integer("num_prunes", 10, "number of pruning steps to run")
@@ -53,8 +52,16 @@ def main(argv):
     #If I want to do distributed training so this is set for debug
     #tf.debugging.set_log_device_placement(True)
 
-    evaluate_saliency(prune_trainer_distributed, mnist_net, get_mnist_datset, 
-            get_loss_categorical, grad1_saliency, FLAGS)
+    #evaluate_saliency(prune_trainer, mnist_net, get_mnist_datset, 
+    #        get_loss_categorical, grad2_saliency, FLAGS, "grad2")
+    evaluate_saliency(prune_trainer, mnist_net, get_mnist_datset, 
+            get_loss_categorical, grad1_saliency, FLAGS, "grad1")
+    evaluate_saliency(prune_trainer, mnist_net, get_mnist_datset, 
+            get_loss_categorical, activity_saliency, FLAGS, "activity")
+    evaluate_saliency(prune_trainer, mnist_net, get_mnist_datset, 
+            get_loss_categorical, l2_saliency, FLAGS, "l2")
+    evaluate_saliency(prune_trainer, mnist_net, get_mnist_datset, 
+            get_loss_categorical, l1_saliency, FLAGS, "l1")
 
 if __name__ == "__main__":
     app.run(main)

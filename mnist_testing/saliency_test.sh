@@ -1,1 +1,1 @@
-python35 evaluate_mnist_saliency.py --initial_training_steps 10 --prune_recovery_steps 2 --prune_recovery_log_count 2 --eval_steps 10 --max_prune_cycles 2
+python35 evaluate_mnist_saliency.py --initial_steps 1 --repair_steps 1 --eval_steps 10 --num_prunes 2

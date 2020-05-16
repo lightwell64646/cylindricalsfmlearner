@@ -42,9 +42,11 @@ class prune_trainer(object):
     def load_model(self, path):
         print("restored", path)
         self.checkpoint.restore(tf.train.latest_checkpoint(path))
+        print(len(self.net.layers[0].variables), end = ", ")
         for images, labels in self.data_loader:
             self.net._set_inputs(images)
             break
+        print(len(self.net.layers[0].variables))
 
     def do_train(self, images, labels):
         with tf.GradientTape(persistent=True) as tape:

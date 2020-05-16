@@ -64,7 +64,7 @@ def main(argv):
     intrinsics = parse_intrinsics(FLAGS.intrinsics_file, FLAGS.num_scales)
     multi_intrinsics = tf.stack([intrinsics for _ in range(FLAGS.batch_size)], axis = 0)
     FLAGS.intrinsics = multi_intrinsics
-    evaluate_saliency(prune_trainer_distributed, depth_ego_net_compatible, get_panorama_datset, 
+    evaluate_saliency(prune_trainer, depth_ego_net_compatible, get_panorama_datset, 
             disparity_loss, grad1_saliency, FLAGS)
 
 if __name__ == "__main__":
