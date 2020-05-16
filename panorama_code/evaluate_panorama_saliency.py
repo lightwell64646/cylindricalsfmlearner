@@ -19,7 +19,7 @@ from absl import app
 import tensorflow as tf
 
 # get command line inputs
-flags.DEFINE_string("cultivation_report_path", "reports/cultivationReport.csv", "the path to write the report on pruning success")
+flags.DEFINE_string("saliency_report_path", "reports/saliencyReport.csv", "the path to write the report on pruning success")
 flags.DEFINE_string("dataset_dir", "../2018-10-03-subset", "Dataset directory")
 
 # So apparently keras can't handle path lengths of more than 170 characters in windows so ... yha. User be ware.

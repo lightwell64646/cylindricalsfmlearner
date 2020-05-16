@@ -16,7 +16,7 @@ from absl import app
 import tensorflow as tf
 
 # get command line inputs
-flags.DEFINE_string("cultivation_report_path", "./cultivationReport.csv", "the path to write the report on pruning success")
+flags.DEFINE_string("saliency_report_path", "reports/saliencyReport.csv", "the path to write the report on pruning success")
 flags.DEFINE_string("dataset_dir", "", "Dataset directory")
 flags.DEFINE_string("mask_path", "", "Path to mask image")
 
