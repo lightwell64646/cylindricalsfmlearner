@@ -31,12 +31,12 @@ class convolution2d(Layer):
         self.last_out = None
 
     def build(self, input_shape):
-        print("building", )
         self.kernel = self.add_weight(name = "kernel",
                                       shape = self.kernel_size + [input_shape[-1], self.units],
                                       initializer = 'random_normal', 
                                       regularizer=tf.keras.regularizers.l2(self.L2Regularization),
                                       trainable = True)
+        self.saliency_weight = self.kernel
         self.bias = self.add_weight(name = "bias",
                                     shape = [self.units],
                                     initializer = 'random_normal',
@@ -118,6 +118,7 @@ class convolution2dTranspose(Layer):
                                       initializer = 'random_normal', 
                                       regularizer=tf.keras.regularizers.l2(self.L2Regularization),
                                       trainable = True)
+        self.saliency_weight = self.kernel
         self.bias = self.add_weight(name = "bias",
                                     shape = [self.units],
                                     initializer = 'random_normal',
@@ -139,7 +140,7 @@ class convolution2dTranspose(Layer):
         self.units = other.units
 
     def call(self, x):
-        print(x.shape, "x shape")
+        #print(x.shape, "x shape")
         # maintain original behavior
         if self.padding=='SAME' or self.padding=='VALID':
             result = tf.nn.conv2d_transpose(x, self.kernel, self.out_shape, self.stride, self.padding) + self.bias
@@ -180,6 +181,86 @@ class convolution2dTranspose(Layer):
             return output_mask
         return None
 
+class attention(Layer):
+    def __init__(self, units, **kwargs):
+        super(attention, self).__init__(**kwargs)
+        # kernel size 1D -> 2D
+        self.transform = linear(units, **kwargs)
+        self.last_attention = None
+
+    def clone_prune_state(self, other):
+        self.units = other.units
+
+    def call(self, x):
+        '''
+        b - batch
+        i,j - segments
+        n - neuron
+        '''
+        attention = tf.einsum("bin,bjn->bij",x,x)
+        attended = tf.einsum("bin,bij->bjn",x,attention)
+        out = self.transform(attended)
+        self.last_attention = attention
+        return out
+    def prune(self, **kwargs):
+        return self.transform.prune(**kwargs)
+        
+class reverseAttention(Layer):
+    def __init__(self, units, seeds, seedL2Regularization = 0.05, pruneSeeds = True, **kwargs):
+        super(reverseAttention, self).__init__(**kwargs)
+        # kernel size 1D -> 2D
+        self.numSeeds = seeds
+        self.transforms = [linear(units, **kwargs) for _ in range(seeds)]
+        self.last_attention = None
+        self.seedL2Regularization = seedL2Regularization
+        self.pruneSeeds = pruneSeeds
+
+    def build(self, input_shape):
+        super(reverseAttention, self).build(input_shape)
+        self.seeds = self.add_weight(name = "seeds",
+                                      shape = [self.seeds, input_shape[-1]],
+                                      initializer = 'random_normal', 
+                                      regularizer=tf.keras.regularizers.l2(self.seedL2Regularization),
+                                      trainable = True)
+        self.saliency_weight = self.seed
+
+    def clone_prune_state(self, other):
+        self.units = other.units
+        self.nodes = other.nodes
+
+    def call(self, x):
+        '''
+        b - batch
+        i - segments
+        s - seeds
+        n - neuron
+        '''
+        seed_attention = tf.einsum("bin,sn->bis",x,self.seeds)
+        attended = tf.einsum("bin,bis->bsn",x,seed_attention)
+        out = [t(attended[:,i]) for i,t in enumerate(self.transforms)]
+        out = tf.stack(out, axis = 1)
+        self.last_attention = seed_attention
+        return out
+    def prune(self, metric, input_mask = None, kill_fraction = 0.1, kill_low = True):
+        if (self.pruneSeeds):
+            seedMetric = tf.reduce_sum(self.last_attention, [0,1])
+            if kill_low:
+                decision_point = np.sort(seedMetric)[int(seedMetric.shape[0]*kill_fraction)]
+                output_mask = [i for i, m in enumerate(seedMetric) if m > decision_point]
+            else:
+                decision_point = np.sort(seedMetric)[int(seedMetric.shape[0]*(1-kill_fraction))]
+                output_mask = [i for i, m in enumerate(seedMetric) if m < decision_point]
+            output_mask = tf.constant(output_mask, dtype = tf.int32)
+            pruned_seeds = tf.gather(self.seeds, output_mask, axis = 0)
+            
+            self.seeds = self.add_weight(name = "seeds",
+                                        shape = [self.seeds, input_shape[-1]],
+                                        initializer = tf.constant_initializer(pruned_seeds.numpy()), 
+                                        regularizer=tf.keras.regularizers.l2(self.seedL2Regularization),
+                                        trainable = True)
+            self.numSeeds = len(output_mask)
+        return self.transform.prune(metric, input_mask, kill_fraction, kill_low)
+
 # Aliases
 conv2d = convolution2d
 conv2dTranspose = convolution2dTranspose
@@ -200,6 +281,7 @@ class linear(Layer):
                                  initializer = 'random_normal',
                                  regularizer=tf.keras.regularizers.l2(self.L2Regularization),
                                  trainable = True)
+        self.saliency_weight = self.w
         self.bias = self.add_weight(name = "b", shape = [self.units],
                                     initializer = 'random_normal',
                                     trainable = True)

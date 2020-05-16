@@ -8,7 +8,15 @@ from prune_single import prune_trainer
 #this seems to have performance issues. Table for latter
 class prune_trainer_distributed(prune_trainer):
     def __init__(self, opt, net_generator, dataset_generator, loss_function, do_accuracy = True):
-        self.strategy = tf.distribute.MirroredStrategy()
+        if (opt.use_tpu):
+            tpu = tf.distribute.cluster_resolver.TPUClusterResolver()  # TPU detection
+            print('Running on TPU ', tpu.cluster_spec().as_dict()['worker'])
+
+            tf.config.experimental_connect_to_cluster(tpu)
+            tf.tpu.experimental.initialize_tpu_system(tpu)
+            self.strategy = tf.distribute.experimental.TPUStrategy(tpu)
+        else:
+            self.strategy = tf.distribute.MirroredStrategy()
         super(prune_trainer_distributed, self).__init__(opt, net_generator, dataset_generator, loss_function, do_accuracy)
         with self.strategy.scope():
             self.optimizer = tf.keras.optimizers.Adam(learning_rate=opt.learning_rate)
@@ -55,8 +63,7 @@ class prune_trainer_distributed(prune_trainer):
             #start per node declaration
             def do_test(images, labels):
                 predictions = self.net(images)
-                answer_loss = tf.nn.compute_average_loss(
-                    self.loss_function(predictions, labels), self.global_batch_size)
+                answer_loss = self.loss_function(predictions, labels, self.flags) / self.flags.batch_size
                 regularization_loss = tf.nn.scale_regularization_loss(self.net.losses)
                 if self.do_accuracy:
                     self.epoch_accuracy(labels, predictions)
@@ -83,7 +90,7 @@ class prune_trainer_distributed(prune_trainer):
         #######                 ######
 
         opt = self.flags
-        loader = self.dataset_generator(opt.batch_size, is_training=False)
+        loader = self.dataset_generator(opt, is_training=False)
         al_sum = rl_sum = test_cycles = 0
         for image, labels in loader:
             answer_loss, regularization_loss = function_wrapped_testing(image, labels)

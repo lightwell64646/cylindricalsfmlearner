@@ -6,6 +6,7 @@ from prune_single import prune_trainer
 from multi_run_pruning import cultivate_model
 from mnist_net import mnist_net
 from mnist_data_loader import get_mnist_datset
+from saliency_metrics import grad2_saliency, grad1_saliency, activity_saliency, l2_saliency, l1_saliency
 from utils import get_loss_categorical
 
 from absl import flags
@@ -42,6 +43,7 @@ flags.DEFINE_integer("save_latest_freq", 5000, \
     "Save the latest model every save_latest_freq iterations (overwrites the previous latest model)")
 flags.DEFINE_boolean("do_wrap", True, "Enables horizontal wrapping")
 flags.DEFINE_boolean("cylindrical", True, "Sets cylindrical projection")
+flags.DEFINE_boolean("use_tpu", False, "whether to search for a tpu")
 
 #Don't touch this.
 flags.DEFINE_boolean("do_accuracy", True, "whether or not to use accuracy as a metric.")
@@ -51,7 +53,8 @@ def main(argv):
     #If I want to do distributed training set this for debug
     #tf.debugging.set_log_device_placement(True)
 
-    cultivate_model(prune_trainer, mnist_net, get_mnist_datset, get_loss_categorical, FLAGS)
+    cultivate_model(prune_trainer_distributed, mnist_net, get_mnist_datset, 
+            get_loss_categorical, grad1_saliency, FLAGS)
 
 if __name__ == "__main__":
     app.run(main)

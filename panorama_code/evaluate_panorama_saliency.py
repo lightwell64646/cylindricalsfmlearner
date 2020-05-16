@@ -10,6 +10,7 @@ from multi_run_pruning import cultivate_model
 from compatible_depth_nets import depth_ego_net_compatible
 from panoramaDataLoader import get_panorama_datset
 from projective_loss import disparity_loss
+from saliency_metrics import grad2_saliency, grad1_saliency, activity_saliency, l2_saliency, l1_saliency
 from parse_intrinsics import parse_intrinsics
 
 from absl import flags
@@ -40,14 +41,16 @@ flags.DEFINE_integer("target_parameter_count", 10000, "number of parameters in d
 flags.DEFINE_integer("max_prune_cycles", 5, "maximum number of prune cycles to run if target_parameter_count can not be met")
 flags.DEFINE_integer("eval_steps", None, "number of batches to use for evaluation. (None means all in training set)")
 flags.DEFINE_float("parameter_value_weighting", 0.002, "larger values favor smaller models when choosing which pruned model to propagate to next cycle. units are ((% acc)/(target_parameter_count parameters))")
-flags.DEFINE_integer("prune_recovery_steps", 1000, "maximum number of training iterations to recover function after pruning network")
-flags.DEFINE_integer("prune_recovery_log_count", 3, "number of prune recovery evaluations to perform durring recovery")
-flags.DEFINE_integer("initial_training_steps", 10000, "Maximum number of training iterations")
+flags.DEFINE_integer("num_prunes", 10, "number of pruning steps to run")
+flags.DEFINE_float("prune_rate", 0.01, "percentage of neurons to kill in a step")
+flags.DEFINE_integer("initial_steps", 100, "Maximum number of training iterations to start") # if zero pruning will fail. More will give a more accurate pruning.
+flags.DEFINE_integer("repair_steps", 10, "Maximum number of training iterations to repair after prune") # if zero pruning will fail. More will give a more accurate pruning.
 flags.DEFINE_integer("summary_freq", 100, "Logging every log_freq iterations")
 flags.DEFINE_integer("save_latest_freq", 5000, \
     "Save the latest model every save_latest_freq iterations (overwrites the previous latest model)")
 flags.DEFINE_boolean("do_wrap", True, "Enables horizontal wrapping")
 flags.DEFINE_boolean("cylindrical", True, "Sets cylindrical projection")
+flags.DEFINE_boolean("use_tpu", False, "whether to use tpu")
 
 #do not set manually. Yes its jank just don't
 flags.DEFINE_boolean("intrinsics", True, "data holder for use internally")
@@ -61,8 +64,8 @@ def main(argv):
     intrinsics = parse_intrinsics(FLAGS.intrinsics_file, FLAGS.num_scales)
     multi_intrinsics = tf.stack([intrinsics for _ in range(FLAGS.batch_size)], axis = 0)
     FLAGS.intrinsics = multi_intrinsics
-    evaluate_saliency(prune_trainer, depth_ego_net_compatible, get_panorama_datset, 
-            disparity_loss, FLAGS)
+    evaluate_saliency(prune_trainer_distributed, depth_ego_net_compatible, get_panorama_datset, 
+            disparity_loss, grad1_saliency, FLAGS)
 
 if __name__ == "__main__":
     app.run(main)

@@ -39,8 +39,8 @@ def get_panorama_datset(flags, is_training = True):
     dataset_dir = flags.dataset_dir
     batch_size = flags.batch_size
     dataset = tf.data.Dataset.from_tensor_slices(
-        get_file_list(dataset_dir, ''))
-        #get_file_list(dataset_dir, 'train' if is_training else 'test'))
+        get_file_list(dataset_dir, 'train' if is_training else 'test'))
+        #get_file_list(dataset_dir, ''))
     if is_training:
         dataset = dataset.repeat()
         dataset = dataset.shuffle(128)

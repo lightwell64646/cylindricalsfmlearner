@@ -2,13 +2,13 @@ from utils import parameter_count
 from copy import deepcopy
 from time import time
 
-def cultivate_model(training_harness, net_class, dataset, loss_function, Flags, prune_levels = [0.1,0.2,0.4]):
+def cultivate_model(training_harness, net_class, dataset, loss_function, saliency_function, Flags, prune_levels = [0.1,0.2,0.4]):
     print(Flags.initial_training_steps, Flags.prune_recovery_steps, Flags.prune_recovery_log_count, Flags.eval_steps)
 
     results_file = open(Flags.cultivation_report_path, "w")
 
     start_time = time()
-    first_model = training_harness(Flags, net_class, dataset, loss_function)
+    first_model = training_harness(Flags, net_class, dataset, loss_function, saliency_function)
     if Flags.init_checkpoint_file != None:
         first_model.load_model(Flags.init_checkpoint_file)
     first_model.train(Flags.initial_training_steps)
@@ -27,7 +27,7 @@ def cultivate_model(training_harness, net_class, dataset, loss_function, Flags, 
     last_iteration_net = first_model
 
     for iter in range(Flags.max_prune_cycles):
-        nets = [training_harness(Flags, net_class, dataset, loss_function) for _ in range(len(prune_levels))]
+        nets = [training_harness(Flags, net_class, dataset, loss_function, saliency_function) for _ in range(len(prune_levels))]
         best_save_path = None
         best_prune_metrics = None
         best_net = None

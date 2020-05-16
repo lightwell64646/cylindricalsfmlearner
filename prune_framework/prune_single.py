@@ -10,11 +10,12 @@ TODO: do object oriented stuff to reduce duplication
 TODO: This code does not work? Testing
 '''
 class prune_trainer(object):
-    def __init__(self, opt, net_generator, dataset_generator, loss_function):
+    def __init__(self, opt, net_generator, dataset_generator, loss_function, saliency_function):
         self.flags = opt
         self.do_accuracy = self.flags.do_accuracy
         self.epoch_accuracy = tf.keras.metrics.CategoricalAccuracy()
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=opt.learning_rate)
+        self.saliency_function = saliency_function
 
         self.net_generator = net_generator
         self.dataset_generator = dataset_generator
@@ -26,17 +27,17 @@ class prune_trainer(object):
 
         self.first = True
         self.metric_alpha = 0.99
-        self.grad2 = [tf.zeros([l.units]) for l in self.net.saliency_tracked_layers]
+        self.saliency = [tf.zeros([l.units]) for l in self.net.saliency_tracked_layers]
 
     def clone_prune_state(self, other):
-        self.grad2 = other.grad2
+        self.saliency = other.saliency
         for ls, lo in zip(self.net.saliency_tracked_layers, other.net.saliency_tracked_layers):
             ls.clone_prune_state(lo)
 
     def getPruneMetric(self):
-        return self.grad2
+        return self.saliency
     def setPruneMetric(self, override):
-        self.grad2 = override
+        self.saliency = override
 
     def load_model(self, path):
         print("restored", path)
@@ -53,7 +54,7 @@ class prune_trainer(object):
             loss = answer_loss + regularization_loss
             if self.do_accuracy:
                 self.epoch_accuracy(labels, predictions)
-            grad1 = tape.gradient(loss, self.net.last_outs)
+            #grad1 = tape.gradient(loss, self.net.last_outs)
         
         # train on loss
         grads = tape.gradient(loss, self.net.trainable_weights)
@@ -61,12 +62,13 @@ class prune_trainer(object):
 
         # get second derivative for pruning
         g2 = []
-        grads_per_neuron = tape.gradient(grad1, self.net.last_outs)
+        #grads_per_neuron = tape.gradient(grad1, self.net.last_outs)
+        grads_per_neuron = self.saliency_function(loss, tape, self.net)
         for g in grads_per_neuron:
             collapse_dims = tf.range(len(g.shape._dims) - 1)
             g2.append(tf.reduce_mean(tf.abs(g), collapse_dims))
         # Ensure that derivatives are the right shape
-        # print(self.grad2[0].shape,self.grad2[-1].shape)
+        # print(self.saliency[0].shape,self.saliency[-1].shape)
         return answer_loss, regularization_loss, g2
 
     def train(self, max_steps = None, verbose = False):
@@ -92,9 +94,9 @@ class prune_trainer(object):
             answer_loss, regularization_loss, g2 = train_step_func(images, labels)
             for i in range(len(g2)):
                 if (self.first):
-                    self.grad2[i] = g2[i]
+                    self.saliency[i] = g2[i]
                 else:
-                    self.grad2[i] = self.grad2[i] * self.metric_alpha + g2[i] * (1 - self.metric_alpha)
+                    self.saliency[i] = self.saliency[i] * self.metric_alpha + g2[i] * (1 - self.metric_alpha)
 
             if self.first:
                 self.first = False
@@ -132,8 +134,7 @@ class prune_trainer(object):
     
     def do_test(self, images, labels):
         predictions = self.net(images)
-        answer_loss = tf.nn.compute_average_loss(
-            self.loss_function(predictions, labels), self.flags.batch_size)
+        answer_loss = self.loss_function(predictions, labels, self.flags) / self.flags.batch_size
         regularization_loss = tf.nn.scale_regularization_loss(self.net.losses)
         if self.do_accuracy:
             self.epoch_accuracy(labels, predictions)
@@ -143,7 +144,7 @@ class prune_trainer(object):
     def eval(self, eval_steps = None, verbose = False):
 
         opt = self.flags
-        loader = self.dataset_generator(opt.batch_size, is_training=False)
+        loader = self.dataset_generator(opt, is_training=False)
         al_sum = rl_sum = test_cycles = 0
         for image, labels in loader:
             answer_loss, regularization_loss = self.do_test(image, labels)
@@ -172,16 +173,16 @@ class prune_trainer(object):
         
 
     def prune(self, kill_fraction = 0.1, save_path = None, verbose = True):
-        self.net.prune(self.grad2, kill_fraction=kill_fraction)
+        self.net.prune(self.saliency, kill_fraction=kill_fraction)
         
         self.checkpoint = tf.train.Checkpoint(optimizer=self.optimizer, model=self.net)
         if (save_path != None):
             self.save_explicit(save_path)
             
-        prune_breaks = [np.sort(metric)[int(metric.shape[0]*kill_fraction)] for metric in self.grad2]
-        self.grad2 = [tf.zeros([l.units]) for l in self.net.saliency_tracked_layers]
+        prune_breaks = [np.sort(metric)[int(metric.shape[0]*kill_fraction)] for metric in self.saliency]
+        self.saliency = [tf.zeros([l.units]) for l in self.net.saliency_tracked_layers]
         if verbose:
-            print("pruned to", [g.shape for g in self.grad2])
+            print("pruned to", [g.shape for g in self.saliency])
 
         return prune_breaks
         

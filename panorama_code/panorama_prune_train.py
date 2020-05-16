@@ -9,6 +9,7 @@ from multi_run_pruning import cultivate_model
 from compatible_depth_nets import depth_ego_net_compatible
 from panoramaDataLoader import get_panorama_datset
 from projective_loss import disparity_loss
+from saliency_metrics import grad2_saliency, grad1_saliency, activity_saliency, l2_saliency, l1_saliency
 from parse_intrinsics import parse_intrinsics
 
 from absl import flags
@@ -47,6 +48,7 @@ flags.DEFINE_integer("save_latest_freq", 5000, \
     "Save the latest model every save_latest_freq iterations (overwrites the previous latest model)")
 flags.DEFINE_boolean("do_wrap", True, "Enables horizontal wrapping")
 flags.DEFINE_boolean("cylindrical", True, "Sets cylindrical projection")
+flags.DEFINE_boolean("use_tpu", False, "whether to use tpu")
 
 #do not set manually. Yes its jank just don't
 flags.DEFINE_boolean("intrinsics", True, "data holder for use internally")
@@ -62,7 +64,7 @@ def main(argv):
     multi_intrinsics = tf.stack([intrinsics for _ in range(FLAGS.batch_size)], axis = 0)
     FLAGS.intrinsics = multi_intrinsics
     cultivate_model(prune_trainer, depth_ego_net_compatible, get_panorama_datset, 
-            disparity_loss, FLAGS)
+            disparity_loss, grad1_saliency, FLAGS)
  
 if __name__ == "__main__":
     app.run(main)
