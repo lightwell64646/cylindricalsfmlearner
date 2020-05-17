@@ -17,6 +17,11 @@ def activity_saliency(loss, tape, net):
     return [tf.reduce_mean(o, [i for i in range(len(o.shape)-1)])
         for o in net.last_outs]
 
+def active_grad_saliency(loss, tape, net):
+    g1s = grad1_saliency(loss, tape, net)
+    a1s = activity_saliency(loss, tape, net)
+    return [g*a for g,a in zip(g1s,a1s)]
+
 def l2_saliency(loss, tape, net):
     weights = average_kernels(net.saliency_tracked_layers)
     return [w*w for w in weights]

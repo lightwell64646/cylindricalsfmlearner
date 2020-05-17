@@ -42,7 +42,7 @@ def evaluate_saliency(training_harness, net_class, dataset, loss_function, salie
     plt.savefig(run_name + "saliency efficiency") 
     if (Flags.show_plots):
         plt.show(block = False)
-    results_file = open(Flags.saliency_report_path, "w")
+    results_file = open(Flags.saliency_report_path + run_name, "w")
     results_file.write("x,pre,post\n")
     for x,pre,post in zip(plot_x,pre_y,post_y):
         results_file.write(str(x)+','+str(pre)+','+str(post)+'\n')

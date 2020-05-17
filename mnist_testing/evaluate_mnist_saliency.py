@@ -7,7 +7,7 @@ from prune_single import prune_trainer
 from evaluate_saliency import evaluate_saliency
 from mnist_net import mnist_net
 from mnist_data_loader import get_mnist_datset
-from saliency_metrics import grad2_saliency, grad1_saliency, activity_saliency, l2_saliency, l1_saliency
+from saliency_metrics import grad2_saliency, grad1_saliency, activity_saliency, active_grad_saliency, l2_saliency, l1_saliency
 from utils import get_loss_categorical
 
 from absl import flags
@@ -54,13 +54,14 @@ def main(argv):
     #If I want to do distributed training so this is set for debug
     #tf.debugging.set_log_device_placement(True)
 
-    # GRAD 2 is BROKEN
-    #evaluate_saliency(prune_trainer, mnist_net, get_mnist_datset, 
-    #        get_loss_categorical, grad2_saliency, FLAGS, "grad2")
-    #evaluate_saliency(prune_trainer, mnist_net, get_mnist_datset, 
-    #        get_loss_categorical, grad1_saliency, FLAGS, "grad1")
-    #evaluate_saliency(prune_trainer, mnist_net, get_mnist_datset, 
-    #        get_loss_categorical, activity_saliency, FLAGS, "activity")
+    evaluate_saliency(prune_trainer, mnist_net, get_mnist_datset, 
+            get_loss_categorical, grad2_saliency, FLAGS, "grad2")
+    evaluate_saliency(prune_trainer, mnist_net, get_mnist_datset, 
+            get_loss_categorical, grad1_saliency, FLAGS, "grad1")
+    evaluate_saliency(prune_trainer, mnist_net, get_mnist_datset, 
+            get_loss_categorical, activity_saliency, FLAGS, "activity")
+    evaluate_saliency(prune_trainer, mnist_net, get_mnist_datset, 
+            get_loss_categorical, active_grad_saliency, FLAGS, "grad1_activity")
     evaluate_saliency(prune_trainer, mnist_net, get_mnist_datset, 
             get_loss_categorical, l2_saliency, FLAGS, "l2")
     evaluate_saliency(prune_trainer, mnist_net, get_mnist_datset, 
