@@ -22,6 +22,7 @@ class convolution2d(Layer):
         if isinstance(kernel_size, int):
             kernel_size = [kernel_size, kernel_size]
         self.units = units
+        self.original_units = units
         self.kernel_size = kernel_size
         self.stride = stride
         self.L2Regularization = L2Regularization
@@ -44,6 +45,8 @@ class convolution2d(Layer):
     
     def clone_prune_state(self, other):
         self.units = other.units
+    def reset_prune_state(self):
+        self.units = self.original_units
 
     def call(self, x):
         # maintain original behavior
@@ -87,6 +90,7 @@ class convolution2d(Layer):
                                      initializer = tf.constant_initializer(pruned_kernel.numpy()),
                                      regularizer=tf.keras.regularizers.l2(self.L2Regularization),
                                      trainable = True)
+            self.saliency_weight = self.kernel
             self.bias = self.add_weight(name = "bias", shape = pruned_bias.shape,
                                      initializer = tf.constant_initializer(pruned_bias.numpy()),
                                      trainable = True)
@@ -101,6 +105,7 @@ class convolution2dTranspose(Layer):
         if isinstance(kernel_size, int):
             kernel_size = [kernel_size, kernel_size]
         self.units = units
+        self.original_units = units
         self.kernel_size = kernel_size
         self.stride = stride
         self.L2Regularization = L2Regularization
@@ -138,6 +143,8 @@ class convolution2dTranspose(Layer):
         self.out_shape = tf.constant(self.out_shape, tf.int32)
     def clone_prune_state(self, other):
         self.units = other.units
+    def reset_prune_state(self):
+        self.units = self.original_units
 
     def call(self, x):
         #print(x.shape, "x shape")
@@ -174,6 +181,7 @@ class convolution2dTranspose(Layer):
                                      initializer = tf.constant_initializer(pruned_kernel.numpy()),
                                      regularizer=tf.keras.regularizers.l2(self.L2Regularization),
                                      trainable = True)
+            self.saliency_weight = self.kernel
             self.bias = self.add_weight(name = "bias", shape = pruned_bias.shape,
                                      initializer = tf.constant_initializer(pruned_bias.numpy()),
                                      trainable = True)
@@ -225,8 +233,7 @@ class reverseAttention(Layer):
         self.saliency_weight = self.seed
 
     def clone_prune_state(self, other):
-        self.units = other.units
-        self.nodes = other.nodes
+        [t.clone_prune_state(other) for t in self.transforms]
 
     def call(self, x):
         '''
@@ -252,7 +259,6 @@ class reverseAttention(Layer):
                 output_mask = [i for i, m in enumerate(seedMetric) if m < decision_point]
             output_mask = tf.constant(output_mask, dtype = tf.int32)
             pruned_seeds = tf.gather(self.seeds, output_mask, axis = 0)
-            
             self.seeds = self.add_weight(name = "seeds",
                                         shape = [self.seeds, input_shape[-1]],
                                         initializer = tf.constant_initializer(pruned_seeds.numpy()), 
@@ -269,6 +275,7 @@ class linear(Layer):
     def __init__(self, units, L2Regularization = 0.05, activation = None, **kwargs):
         super(linear, self).__init__(**kwargs)
         self.units = units
+        self.origilan_units = units
         self.L2Regularization = L2Regularization
         self.activation = activation
 
@@ -288,6 +295,8 @@ class linear(Layer):
 
     def clone_prune_state(self, other):
         self.units = other.units
+    def reset_prune_state(self):
+        self.units = self.original_units
 
     def call(self, x):
         out = x @ self.w + self.bias
@@ -316,6 +325,7 @@ class linear(Layer):
                                         initializer = tf.constant_initializer(pruned_w.numpy()),
                                         regularizer=tf.keras.regularizers.l2(self.L2Regularization),
                                         trainable = True)
+            self.saliency_weight = self.w
             self.bias = self.add_weight(name = "b", shape = pruned_bias.shape,
                                         initializer = tf.constant_initializer(pruned_bias.numpy()),
                                         trainable = True)

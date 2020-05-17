@@ -35,10 +35,12 @@ flags.DEFINE_integer("num_source", 2, "Number of source images")
 flags.DEFINE_integer("target_parameter_count", 10000, "number of parameters in desired model")
 flags.DEFINE_integer("eval_steps", None, "number of batches to use for evaluation. (None means all in training set)")
 flags.DEFINE_float("parameter_value_weighting", 0.002, "larger values favor smaller models when choosing which pruned model to propagate to next cycle. units are ((% acc)/(target_parameter_count parameters))")
-flags.DEFINE_integer("num_prunes", 10, "number of pruning steps to run")
-flags.DEFINE_float("prune_rate", 0.01, "percentage of neurons to kill in a step")
-flags.DEFINE_integer("initial_steps", 100, "Maximum number of training iterations to start") # if zero pruning will fail. More will give a more accurate pruning.
+flags.DEFINE_integer("num_prunes", 4, "number of pruning steps to run")
+flags.DEFINE_float("prune_rate", 0.2, "percentage of neurons to kill in a step")
+flags.DEFINE_integer("initial_steps", 1000, "Maximum number of training iterations to start") # if zero pruning will fail. More will give a more accurate pruning.
 flags.DEFINE_integer("repair_steps", 10, "Maximum number of training iterations to repair after prune") # if zero pruning will fail. More will give a more accurate pruning.
+
+flags.DEFINE_boolean("show_plots", False, "whether or not to use accuracy as a metric. Always used for MNIST supervised")
 flags.DEFINE_integer("summary_freq", 100, "Logging every log_freq iterations")
 flags.DEFINE_integer("save_latest_freq", 5000, \
     "Save the latest model every save_latest_freq iterations (overwrites the previous latest model)")
@@ -52,12 +54,13 @@ def main(argv):
     #If I want to do distributed training so this is set for debug
     #tf.debugging.set_log_device_placement(True)
 
+    # GRAD 2 is BROKEN
     #evaluate_saliency(prune_trainer, mnist_net, get_mnist_datset, 
     #        get_loss_categorical, grad2_saliency, FLAGS, "grad2")
-    evaluate_saliency(prune_trainer, mnist_net, get_mnist_datset, 
-            get_loss_categorical, grad1_saliency, FLAGS, "grad1")
-    evaluate_saliency(prune_trainer, mnist_net, get_mnist_datset, 
-            get_loss_categorical, activity_saliency, FLAGS, "activity")
+    #evaluate_saliency(prune_trainer, mnist_net, get_mnist_datset, 
+    #        get_loss_categorical, grad1_saliency, FLAGS, "grad1")
+    #evaluate_saliency(prune_trainer, mnist_net, get_mnist_datset, 
+    #        get_loss_categorical, activity_saliency, FLAGS, "activity")
     evaluate_saliency(prune_trainer, mnist_net, get_mnist_datset, 
             get_loss_categorical, l2_saliency, FLAGS, "l2")
     evaluate_saliency(prune_trainer, mnist_net, get_mnist_datset, 

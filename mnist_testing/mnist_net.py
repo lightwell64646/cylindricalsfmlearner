@@ -43,8 +43,6 @@ class mnist_net(tf.keras.Model):
         y = tf.keras.layers.MaxPool2D()(y)
         y = self.c2(y)
         y = self.proc(y)
-        y = self.proc(y)
-        y = self.proc(y)
         y = self.flatten(y)
         y = self.l1(y)
         y = self.l2(y)

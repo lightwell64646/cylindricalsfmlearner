@@ -33,7 +33,10 @@ class prune_trainer(object):
         self.saliency = other.saliency
         for ls, lo in zip(self.net.saliency_tracked_layers, other.net.saliency_tracked_layers):
             ls.clone_prune_state(lo)
-
+    def reset_prune_state(self):
+        self.saliency = [tf.zeros([l.units]) for l in self.net.saliency_tracked_layers]
+        for ls in self.net.saliency_tracked_layers:
+            ls.reset_prune_state()
     def getPruneMetric(self):
         return self.saliency
     def setPruneMetric(self, override):
