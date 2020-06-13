@@ -20,7 +20,8 @@ import tensorflow as tf
 
 # get command line inputs
 flags.DEFINE_string("saliency_report_path", "reports/saliencyReport.csv", "the path to write the report on pruning success")
-flags.DEFINE_string("dataset_dir", "../2018-10-03-subset", "Dataset directory")
+flags.DEFINE_string("dataset_dir", "E:/2018-10-03-full/2018-10-03", "Dataset directory")
+flags.DEFINE_string("run_name", "Panorama Test", "")
 
 # So apparently keras can't handle path lengths of more than 170 characters in windows so ... yha. User be ware.
 flags.DEFINE_string("checkpoint_dir", "./ckpts/", "Directory name to save the checkpoints")
@@ -41,11 +42,11 @@ flags.DEFINE_integer("target_parameter_count", 10000, "number of parameters in d
 flags.DEFINE_integer("max_prune_cycles", 5, "maximum number of prune cycles to run if target_parameter_count can not be met")
 flags.DEFINE_integer("eval_steps", None, "number of batches to use for evaluation. (None means all in training set)")
 flags.DEFINE_float("parameter_value_weighting", 0.002, "larger values favor smaller models when choosing which pruned model to propagate to next cycle. units are ((% acc)/(target_parameter_count parameters))")
-flags.DEFINE_integer("num_prunes", 10, "number of pruning steps to run")
+flags.DEFINE_integer("num_prunes", 20, "number of pruning steps to run")
 flags.DEFINE_float("prune_rate", 0.01, "percentage of neurons to kill in a step")
 flags.DEFINE_integer("initial_steps", 100, "Maximum number of training iterations to start") # if zero pruning will fail. More will give a more accurate pruning.
-flags.DEFINE_integer("repair_steps", 10, "Maximum number of training iterations to repair after prune") # if zero pruning will fail. More will give a more accurate pruning.
-flags.DEFINE_integer("summary_freq", 100, "Logging every log_freq iterations")
+flags.DEFINE_integer("repair_steps", 0, "Maximum number of training iterations to repair after prune") # if zero pruning will fail. More will give a more accurate pruning.
+flags.DEFINE_integer("summary_freq", 1000, "Logging every log_freq iterations")
 flags.DEFINE_integer("save_latest_freq", 5000, \
     "Save the latest model every save_latest_freq iterations (overwrites the previous latest model)")
 flags.DEFINE_boolean("do_wrap", True, "Enables horizontal wrapping")
@@ -65,7 +66,7 @@ def main(argv):
     multi_intrinsics = tf.stack([intrinsics for _ in range(FLAGS.batch_size)], axis = 0)
     FLAGS.intrinsics = multi_intrinsics
     evaluate_saliency(prune_trainer, depth_ego_net_compatible, get_panorama_datset, 
-            disparity_loss, grad1_saliency, FLAGS)
+            disparity_loss, grad1_saliency, FLAGS, FLAGS.run_name)
 
 if __name__ == "__main__":
     app.run(main)
