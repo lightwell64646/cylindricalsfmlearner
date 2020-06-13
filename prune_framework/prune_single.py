@@ -3,6 +3,7 @@ import time
 import tensorflow as tf
 import numpy as np
 
+
 '''
 A single GPU version of prune_trainer_distributed
 
@@ -44,7 +45,8 @@ class prune_trainer(object):
 
     def load_model(self, path):
         print("restored", path)
-        self.checkpoint.restore(tf.train.latest_checkpoint(path))
+        self.net.load_weights(path + ".ckpt")
+        #self.checkpoint.restore(path).assert_existing_objects_matched()
         print(len(self.net.layers[0].variables), end = ", ")
         for images, labels in self.data_loader:
             self.net._set_inputs(images)
@@ -131,10 +133,11 @@ class prune_trainer(object):
                 break
 
     def save_explicit(self, path):
-        if (not os.path.isdir(path)):
-            os.mkdir(path)
         print("saving", [[w.shape for w in l.get_weights()] for l in self.net.layers])
-        self.checkpoint.save(path)
+        print(path)
+        #print(self.checkpoint.save(path))
+
+        self.net.save_weights(path + ".ckpt")
 
     
     def do_test(self, images, labels):
@@ -177,15 +180,19 @@ class prune_trainer(object):
         return average_anser_loss
         
 
-    def prune(self, kill_fraction = 0.1, save_path = None, verbose = True):
-        self.net.prune(self.saliency, kill_fraction=kill_fraction)
-        
-        self.checkpoint = tf.train.Checkpoint(optimizer=self.optimizer, model=self.net)
+    def prune(self, kill_fraction = 0.1, save_path = None, verbose = True, 
+            kill_low = True, const_percent = False, wipe_saliency = False) :
+        masks, prune_breaks = self.net.prune(self.saliency, kill_fraction = kill_fraction, kill_low = kill_low, const_percent = const_percent)
+
+        #self.checkpoint = tf.train.Checkpoint(optimizer=self.optimizer, model=self.net)
         if (save_path != None):
             self.save_explicit(save_path)
-            
-        prune_breaks = [np.sort(metric)[int(metric.shape[0]*kill_fraction)] for metric in self.saliency]
-        self.saliency = [tf.zeros([l.units]) for l in self.net.saliency_tracked_layers]
+        
+        if wipe_saliency:
+            self.saliency = [tf.zeros([l.units]) for l in self.net.saliency_tracked_layers]
+        else:
+            self.saliency = [tf.gather(sal, mask, axis = 0) for sal, mask in zip(self.saliency, masks)]
+
         if verbose:
             print("pruned to", [g.shape for g in self.saliency])
 

@@ -69,7 +69,7 @@ class convolution2d(Layer):
         self.last_out = result
         return result
 
-    def prune(self, metric, input_mask = None, kill_fraction = 0.1, kill_low = True):
+    def prune(self, metric, input_mask = None, kill_fraction = 0.1, kill_low = True, const_percent = False):
         if (input_mask is not None): 
             pruned_kernel = tf.gather(self.kernel, input_mask, axis = 2)
             self.kernel = self.add_weight(name = "kernel", shape = pruned_kernel.shape,
@@ -77,12 +77,25 @@ class convolution2d(Layer):
                                      regularizer=tf.keras.regularizers.l2(self.L2Regularization),
                                      trainable = True)
         if metric is not None:
+            if (const_percent):
+                if kill_low:
+                    decision_point = np.sort(metric)[int(metric.shape[0]*kill_fraction)]
+                else:
+                    decision_point = np.sort(metric)[int(metric.shape[0]*(1-kill_fraction))]
+            else:
+                kill_rate = kill_fraction
+                rangeMet = tf.reduce_max(metric) - tf.reduce_min(metric)
+                if kill_low:
+                    decision_point = tf.reduce_min(metric) + rangeMet * kill_rate
+                else:
+                    decision_point = tf.reduce_max(metric) - rangeMet * kill_rate
             if kill_low:
-                decision_point = np.sort(metric)[int(metric.shape[0]*kill_fraction)]
                 output_mask = [i for i, m in enumerate(metric) if m > decision_point]
             else:
-                decision_point = np.sort(metric)[int(metric.shape[0]*(1-kill_fraction))]
                 output_mask = [i for i, m in enumerate(metric) if m < decision_point]
+            if len(output_mask) == 0:
+                output_mask = tf.math.argmax(metric)
+                
             output_mask = tf.constant(output_mask, dtype = tf.int32)
             pruned_kernel = tf.gather(self.kernel, output_mask, axis = 3)
             pruned_bias = tf.gather(self.bias, output_mask)
@@ -95,8 +108,8 @@ class convolution2d(Layer):
                                      initializer = tf.constant_initializer(pruned_bias.numpy()),
                                      trainable = True)
             self.units = len(output_mask)
-            return output_mask
-        return None
+            return output_mask, decision_point
+        return None, None
 
 class convolution2dTranspose(Layer):
     def __init__(self, units, kernel_size, batch_size, stride=1, padding='SAME', L2Regularization = 0.05, activation = None, **kwargs):
@@ -160,7 +173,7 @@ class convolution2dTranspose(Layer):
         self.last_out = result
         return result
 
-    def prune(self, metric, input_mask = None, kill_fraction = 0.1, kill_low = True):
+    def prune(self, metric, input_mask = None, kill_fraction = 0.1, kill_low = True, const_percent = False):
         if (input_mask is not None): 
             pruned_kernel = tf.gather(self.kernel, input_mask, axis = 2)
             self.kernel = self.add_weight(name = "kernel", shape = pruned_kernel.shape,
@@ -168,12 +181,25 @@ class convolution2dTranspose(Layer):
                                      regularizer=tf.keras.regularizers.l2(self.L2Regularization),
                                      trainable = True)
         if metric is not None:
+            if (const_percent):
+                if kill_low:
+                    decision_point = np.sort(metric)[int(metric.shape[0]*kill_fraction)]
+                else:
+                    decision_point = np.sort(metric)[int(metric.shape[0]*(1-kill_fraction))]
+            else:
+                kill_rate = kill_fraction
+                rangeMet = tf.reduce_max(metric) - tf.reduce_min(metric)
+                if kill_low:
+                    decision_point = tf.reduce_min(metric) + rangeMet * kill_rate
+                else:
+                    decision_point = tf.reduce_max(metric) - rangeMet * kill_rate
             if kill_low:
-                decision_point = np.sort(metric)[int(metric.shape[0]*kill_fraction)]
                 output_mask = [i for i, m in enumerate(metric) if m > decision_point]
             else:
-                decision_point = np.sort(metric)[int(metric.shape[0]*(1-kill_fraction))]
                 output_mask = [i for i, m in enumerate(metric) if m < decision_point]
+            if len(output_mask) == 0:
+                output_mask = [tf.math.argmax(metric)]
+                
             output_mask = tf.constant(output_mask, dtype = tf.int32)
             pruned_kernel = tf.gather(self.kernel, output_mask, axis = 3)
             pruned_bias = tf.gather(self.bias, output_mask)
@@ -186,8 +212,8 @@ class convolution2dTranspose(Layer):
                                      initializer = tf.constant_initializer(pruned_bias.numpy()),
                                      trainable = True)
             self.units = len(output_mask)
-            return output_mask
-        return None
+            return output_mask, decision_point
+        return None, None
 
 class attention(Layer):
     def __init__(self, units, **kwargs):
@@ -222,9 +248,11 @@ class reverseAttention(Layer):
         self.last_attention = None
         self.seedL2Regularization = seedL2Regularization
         self.pruneSeeds = pruneSeeds
+        self.input_shape = None
 
     def build(self, input_shape):
         super(reverseAttention, self).build(input_shape)
+        self.input_shape = input_shape[-1]
         self.seeds = self.add_weight(name = "seeds",
                                       shape = [self.seeds, input_shape[-1]],
                                       initializer = 'random_normal', 
@@ -248,19 +276,32 @@ class reverseAttention(Layer):
         out = tf.stack(out, axis = 1)
         self.last_attention = seed_attention
         return out
-    def prune(self, metric, input_mask = None, kill_fraction = 0.1, kill_low = True):
+    def prune(self, metric, input_mask = None, kill_fraction = 0.1, kill_low = True, const_percent = False):
         if (self.pruneSeeds):
             seedMetric = tf.reduce_sum(self.last_attention, [0,1])
+            if (const_percent):
+                if kill_low:
+                    decision_point = np.sort(seedMetric)[int(seedMetric.shape[0]*kill_fraction)]
+                else:
+                    decision_point = np.sort(seedMetric)[int(seedMetric.shape[0]*(1-kill_fraction))]
+            else:
+                kill_rate = kill_fraction
+                rangeMet = tf.reduce_max(seedMetric) - tf.reduce_min(seedMetric)
+                if kill_low:
+                    decision_point = tf.reduce_min(seedMetric) + rangeMet * kill_rate
+                else:
+                    decision_point = tf.reduce_max(seedMetric) - rangeMet * kill_rate
             if kill_low:
-                decision_point = np.sort(seedMetric)[int(seedMetric.shape[0]*kill_fraction)]
                 output_mask = [i for i, m in enumerate(seedMetric) if m > decision_point]
             else:
-                decision_point = np.sort(seedMetric)[int(seedMetric.shape[0]*(1-kill_fraction))]
                 output_mask = [i for i, m in enumerate(seedMetric) if m < decision_point]
+            if len(output_mask) == 0:
+                output_mask = [tf.math.argmax(seedMetric)]
+                
             output_mask = tf.constant(output_mask, dtype = tf.int32)
             pruned_seeds = tf.gather(self.seeds, output_mask, axis = 0)
             self.seeds = self.add_weight(name = "seeds",
-                                        shape = [self.seeds, input_shape[-1]],
+                                        shape = [self.seeds, self.input_shape],
                                         initializer = tf.constant_initializer(pruned_seeds.numpy()), 
                                         regularizer=tf.keras.regularizers.l2(self.seedL2Regularization),
                                         trainable = True)
@@ -304,7 +345,7 @@ class linear(Layer):
             out = self.activation(out)
         self.last_out = out
         return out
-    def prune(self, metric, input_mask = None, kill_fraction = 0.1, kill_low = True):
+    def prune(self, metric, input_mask = None, kill_fraction = 0.1, kill_low = True, const_percent = False):
         if (input_mask is not None): 
             pruned_w = tf.gather(self.w, input_mask, axis = 0)
             self.w = self.add_weight(name = "weight", shape = pruned_w.shape,
@@ -312,14 +353,27 @@ class linear(Layer):
                                         regularizer=tf.keras.regularizers.l2(self.L2Regularization),
                                         trainable = True)
         if metric is not None:
+            if (const_percent):
+                if kill_low:
+                    decision_point = np.sort(metric)[int(metric.shape[0]*kill_fraction)]
+                else:
+                    decision_point = np.sort(metric)[int(metric.shape[0]*(1-kill_fraction))]
+            else:
+                kill_rate = kill_fraction
+                rangeMet = tf.reduce_max(metric) - tf.reduce_min(metric)
+                if kill_low:
+                    decision_point = tf.reduce_min(metric) + rangeMet * kill_rate
+                else:
+                    decision_point = tf.reduce_max(metric) - rangeMet * kill_rate
             if kill_low:
-                decision_point = np.sort(metric)[int(metric.shape[0]*kill_fraction)]
                 output_mask = [i for i, m in enumerate(metric) if m > decision_point]
             else:
-                decision_point = np.sort(metric)[int(metric.shape[0]*(1-kill_fraction))]
                 output_mask = [i for i, m in enumerate(metric) if m < decision_point]
+            if len(output_mask) == 0:
+                output_mask = [tf.math.argmax(metric)]
+
             output_mask = tf.constant(output_mask, dtype = tf.int32)
-            pruned_w = tf.gather(self.w, output_mask, axis = 1) * (1/(1-kill_fraction))
+            pruned_w = tf.gather(self.w, output_mask, axis = 1)# * (1/(1-kill_fraction))
             pruned_bias = tf.gather(self.bias, output_mask)
             self.w = self.add_weight(name = "weight", shape = pruned_w.shape,
                                         initializer = tf.constant_initializer(pruned_w.numpy()),
@@ -330,9 +384,8 @@ class linear(Layer):
                                         initializer = tf.constant_initializer(pruned_bias.numpy()),
                                         trainable = True)
             self.units = len(output_mask)
-            #print("prune linear output_mask", output_mask.shape, metric.shape, input_mask.shape)
-            return output_mask
-        return None
+            return output_mask, decision_point
+        return None, None
 
 '''
 tiles the pruning metrics to ensure clean transition
@@ -351,13 +404,14 @@ class flatten(Layer):
         self.units = other.units
 
     def call(self, x):
+        #print(x, self.mirrored_inputs, self.units)
         return tf.reshape(x, [-1, self.mirrored_inputs*self.units])
 
     def prune(self, empty, input_mask = None, kill_fraction = 0.1, kill_low = None):
-        self.units = tf.reduce_sum(input_mask.shape)
         #print("flatten shortened to ", input_mask.shape)
         res = [input_mask + i*self.units for i in range(self.mirrored_inputs)]
         res = tf.concat(res,0)
+        self.units = tf.reduce_sum(input_mask.shape)
         return res
 
 class resnet(Layer):

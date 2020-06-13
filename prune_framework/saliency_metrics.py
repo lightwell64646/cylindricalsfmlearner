@@ -8,13 +8,13 @@ import tf_cylindrical as cylin
 def grad2_saliency(loss, tape, net):
     with tape as tape2:
         grad1 = tape.gradient(loss, net.last_outs)
-    return tape2.gradient(grad1, net.last_outs)
+    return [tf.abs(g) for g in tape2.gradient(grad1, net.last_outs)]
 
 def grad1_saliency(loss, tape, net):
-    return tape.gradient(loss, net.last_outs)
+    return [tf.abs(g) for g in tape.gradient(loss, net.last_outs)]
 
 def activity_saliency(loss, tape, net):
-    return [tf.reduce_mean(o, [i for i in range(len(o.shape)-1)])
+    return [tf.abs(tf.reduce_mean(o, [i for i in range(len(o.shape)-1)]))
         for o in net.last_outs]
 
 def active_grad_saliency(loss, tape, net):
