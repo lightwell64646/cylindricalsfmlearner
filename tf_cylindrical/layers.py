@@ -48,6 +48,16 @@ class convolution2d(Layer):
     def reset_prune_state(self):
         self.units = self.original_units
 
+    def scramble(self):
+        self.kernel = self.add_weight(name = "kernel", shape = self.kernel.shape,
+                                    initializer = 'random_normal',
+                                    regularizer=tf.keras.regularizers.l2(self.L2Regularization),
+                                    trainable = True)
+        self.saliency_weight = self.kernel
+        self.bias = self.add_weight(name = "bias", shape = self.bias.shape,
+                                    initializer = 'random_normal',
+                                    trainable = True)
+
     def call(self, x):
         # maintain original behavior
         if self.padding=='SAME' or self.padding=='VALID':
@@ -93,8 +103,10 @@ class convolution2d(Layer):
                 output_mask = [i for i, m in enumerate(metric) if m > decision_point]
             else:
                 output_mask = [i for i, m in enumerate(metric) if m < decision_point]
+            self.units = len(output_mask)
             if len(output_mask) == 0:
-                output_mask = tf.math.argmax(metric)
+                output_mask = tf.expand_dims(tf.math.argmax(metric, output_type = tf.int32), axis = -1)
+                self.units = 1
                 
             output_mask = tf.constant(output_mask, dtype = tf.int32)
             pruned_kernel = tf.gather(self.kernel, output_mask, axis = 3)
@@ -107,7 +119,6 @@ class convolution2d(Layer):
             self.bias = self.add_weight(name = "bias", shape = pruned_bias.shape,
                                      initializer = tf.constant_initializer(pruned_bias.numpy()),
                                      trainable = True)
-            self.units = len(output_mask)
             return output_mask, decision_point
         return None, None
 
@@ -159,6 +170,16 @@ class convolution2dTranspose(Layer):
     def reset_prune_state(self):
         self.units = self.original_units
 
+    def scramble(self):
+        self.kernel = self.add_weight(name = "kernel", shape = self.kernel.shape,
+                                    initializer = 'random_normal',
+                                    regularizer=tf.keras.regularizers.l2(self.L2Regularization),
+                                    trainable = True)
+        self.saliency_weight = self.kernel
+        self.bias = self.add_weight(name = "bias", shape = self.bias.shape,
+                                    initializer = 'random_normal',
+                                    trainable = True)
+
     def call(self, x):
         #print(x.shape, "x shape")
         # maintain original behavior
@@ -197,8 +218,10 @@ class convolution2dTranspose(Layer):
                 output_mask = [i for i, m in enumerate(metric) if m > decision_point]
             else:
                 output_mask = [i for i, m in enumerate(metric) if m < decision_point]
+            self.units = len(output_mask)
             if len(output_mask) == 0:
-                output_mask = [tf.math.argmax(metric)]
+                output_mask = tf.expand_dims(tf.math.argmax(metric, output_type = tf.int32), axis = -1)
+                self.units = 1
                 
             output_mask = tf.constant(output_mask, dtype = tf.int32)
             pruned_kernel = tf.gather(self.kernel, output_mask, axis = 3)
@@ -211,7 +234,6 @@ class convolution2dTranspose(Layer):
             self.bias = self.add_weight(name = "bias", shape = pruned_bias.shape,
                                      initializer = tf.constant_initializer(pruned_bias.numpy()),
                                      trainable = True)
-            self.units = len(output_mask)
             return output_mask, decision_point
         return None, None
 
@@ -295,8 +317,10 @@ class reverseAttention(Layer):
                 output_mask = [i for i, m in enumerate(seedMetric) if m > decision_point]
             else:
                 output_mask = [i for i, m in enumerate(seedMetric) if m < decision_point]
+            self.units = len(output_mask)
             if len(output_mask) == 0:
-                output_mask = [tf.math.argmax(seedMetric)]
+                output_mask = tf.expand_dims(tf.math.argmax(seedMetric, output_type = tf.int32), axis = -1)
+                self.numSeeds = 1
                 
             output_mask = tf.constant(output_mask, dtype = tf.int32)
             pruned_seeds = tf.gather(self.seeds, output_mask, axis = 0)
@@ -305,7 +329,6 @@ class reverseAttention(Layer):
                                         initializer = tf.constant_initializer(pruned_seeds.numpy()), 
                                         regularizer=tf.keras.regularizers.l2(self.seedL2Regularization),
                                         trainable = True)
-            self.numSeeds = len(output_mask)
         return self.transform.prune(metric, input_mask, kill_fraction, kill_low)
 
 # Aliases
@@ -339,6 +362,17 @@ class linear(Layer):
     def reset_prune_state(self):
         self.units = self.original_units
 
+
+    def scramble(self):
+        self.w = self.add_weight(name = "weight", shape = self.w.shape,
+                                    initializer = 'random_normal',
+                                    regularizer=tf.keras.regularizers.l2(self.L2Regularization),
+                                    trainable = True)
+        self.saliency_weight = self.w
+        self.bias = self.add_weight(name = "b", shape = self.bias.shape,
+                                    initializer = 'random_normal',
+                                    trainable = True)
+
     def call(self, x):
         out = x @ self.w + self.bias
         if self.activation != None:
@@ -369,8 +403,10 @@ class linear(Layer):
                 output_mask = [i for i, m in enumerate(metric) if m > decision_point]
             else:
                 output_mask = [i for i, m in enumerate(metric) if m < decision_point]
+            self.units = len(output_mask)
             if len(output_mask) == 0:
-                output_mask = [tf.math.argmax(metric)]
+                output_mask = tf.expand_dims(tf.math.argmax(metric, output_type = tf.int32), axis = -1)
+                self.units = 1
 
             output_mask = tf.constant(output_mask, dtype = tf.int32)
             pruned_w = tf.gather(self.w, output_mask, axis = 1)# * (1/(1-kill_fraction))
@@ -383,7 +419,6 @@ class linear(Layer):
             self.bias = self.add_weight(name = "b", shape = pruned_bias.shape,
                                         initializer = tf.constant_initializer(pruned_bias.numpy()),
                                         trainable = True)
-            self.units = len(output_mask)
             return output_mask, decision_point
         return None, None
 
